@@ -1,5 +1,6 @@
 ﻿using Confluent.Kafka;
 using Extension.Confluent.Kafka.Client.Configuration;
+using Extension.Confluent.Kafka.Client.Consumer.Builder;
 using Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy;
 using Extension.Confluent.Kafka.Client.Health;
 using Extension.Confluent.Kafka.Client.Metrics;

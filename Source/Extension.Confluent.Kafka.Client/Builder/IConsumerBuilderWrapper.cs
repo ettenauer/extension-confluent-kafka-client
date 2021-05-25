@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Extension.Confluent.Kafka.Client.Consumer
+namespace Extension.Confluent.Kafka.Client.Consumer.Builder
 {
     internal interface IConsumerBuilderWrapper<TKey, TValue>
     {

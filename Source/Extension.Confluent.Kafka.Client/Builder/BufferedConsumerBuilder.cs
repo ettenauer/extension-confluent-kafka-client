@@ -9,20 +9,26 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Extension.Confluent.Kafka.Client.Consumer
+namespace Extension.Confluent.Kafka.Client.Consumer.Builder
 {
     public class BufferedConsumerBuilder<TKey, TValue>
     {
         private ConsumerBuilder<TKey, TValue>? consumerBuilder;
-        private Func<IAdminClient>? createAdminClientFunc;
+        private AdminClientBuilder? adminClientBuilder;
         private IHealthStatusCallback? healthStatusCallback;
         private IConsumeResultCallback<TKey, TValue>? callback;
         private IMetricsCallback? metricsCallback;
         private Func<ConsumeResult<TKey, TValue>, long>? getChannelIdFunc;
         private Action<IConsumer<TKey, TValue>, List<TopicPartition>>? partitionsAssingedHandler;
         private Action<IConsumer<TKey, TValue>, List<TopicPartitionOffset>>? partitionsRevokedHandler;
-        private BufferedConsumerConfig? configuration;
         private ILogger? logger;
+
+        private readonly BufferedConsumerConfig configuration;
+
+        public BufferedConsumerBuilder(BufferedConsumerConfig configuration)
+        {
+            this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        }
 
         public BufferedConsumerBuilder<TKey, TValue> SetConsumerBuilder(ConsumerBuilder<TKey, TValue> consumerBuilder)
         {
@@ -30,9 +36,9 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             return this;
         }
 
-        public BufferedConsumerBuilder<TKey, TValue> SetAdminClient(Func<IAdminClient> createAdminClientFunc)
+        public BufferedConsumerBuilder<TKey, TValue> SetAdminBuilder(AdminClientBuilder adminClientBuilder)
         {
-            this.createAdminClientFunc = createAdminClientFunc ?? throw new ArgumentNullException(nameof(createAdminClientFunc));
+            this.adminClientBuilder = adminClientBuilder ?? throw new ArgumentNullException(nameof(adminClientBuilder));
             return this;
         }
 
@@ -51,12 +57,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         public BufferedConsumerBuilder<TKey, TValue> SetMetricsCallback(IMetricsCallback metricsCallback)
         {
             this.metricsCallback = metricsCallback;
-            return this;
-        }
-
-        public BufferedConsumerBuilder<TKey, TValue> SetConfiguration(BufferedConsumerConfig configuration)
-        {
-            this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             return this;
         }
 
@@ -87,12 +87,12 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         public IBufferedConsumer<TKey, TValue> Build()
         {
             if (consumerBuilder == null) throw new ArgumentException($"{nameof(SetConsumerBuilder)} must be called");
-            if (createAdminClientFunc == null) throw new ArgumentException($"{nameof(SetAdminClient)} must be called");
-            if (configuration == null) throw new ArgumentException($"{nameof(SetConfiguration)} must be called");
+            if (adminClientBuilder == null) throw new ArgumentException($"{nameof(SetAdminBuilder)} must be called");
             if (logger == null) throw new ArgumentException($"{nameof(SetLogger)} must be called");
 
-            return new BufferedConsumer<TKey, TValue>(new ConsumerBuilderWrapper<TKey, TValue>(consumerBuilder, partitionsAssingedHandler, partitionsRevokedHandler),
-                createAdminClientFunc(),
+            return new BufferedConsumer<TKey, TValue>(
+                new ConsumerBuilderWrapper<TKey, TValue>(consumerBuilder, partitionsAssingedHandler, partitionsRevokedHandler),
+                adminClientBuilder.Build(),
                 (c) => CreateOffsetStore(c, configuration),
                 CreateDispatcher(configuration),
                 callback,
