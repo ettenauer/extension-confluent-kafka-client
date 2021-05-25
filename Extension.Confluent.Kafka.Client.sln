@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31229.75
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extension.Confluent.Kafka.Client", "Extension.Confluent.Kafka.Client\Extension.Confluent.Kafka.Client.csproj", "{C60F48F9-82C4-41F2-90AC-FBA3437D0FFB}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AF589295-24BD-4D7F-80F6-81D984C485A3}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
@@ -12,9 +10,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extension.Confluent.Kafka.Client.Tests", "Tests\Extension.Confluent.Kafka.Client.Tests\Extension.Confluent.Kafka.Client.Tests.csproj", "{FE29E1DF-E7F1-4E90-82AF-E7BF436044F9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Extension.Confluent.Kafka.Client.Tests", "Tests\Extension.Confluent.Kafka.Client.Tests\Extension.Confluent.Kafka.Client.Tests.csproj", "{FE29E1DF-E7F1-4E90-82AF-E7BF436044F9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Local.Runner", "Tests\Local.Runner\Local.Runner.csproj", "{BCEF7D90-73FA-4BF0-90DB-74804EF96D04}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Local.Runner", "Tests\Local.Runner\Local.Runner.csproj", "{BCEF7D90-73FA-4BF0-90DB-74804EF96D04}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Extension.Confluent.Kafka.Client", "Source\Extension.Confluent.Kafka.Client\Extension.Confluent.Kafka.Client.csproj", "{CE564CB0-42BD-41AA-B8D3-92F6960D9DA3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,10 +22,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C60F48F9-82C4-41F2-90AC-FBA3437D0FFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C60F48F9-82C4-41F2-90AC-FBA3437D0FFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C60F48F9-82C4-41F2-90AC-FBA3437D0FFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C60F48F9-82C4-41F2-90AC-FBA3437D0FFB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FE29E1DF-E7F1-4E90-82AF-E7BF436044F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE29E1DF-E7F1-4E90-82AF-E7BF436044F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FE29E1DF-E7F1-4E90-82AF-E7BF436044F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -34,6 +30,10 @@ Global
 		{BCEF7D90-73FA-4BF0-90DB-74804EF96D04}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BCEF7D90-73FA-4BF0-90DB-74804EF96D04}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BCEF7D90-73FA-4BF0-90DB-74804EF96D04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE564CB0-42BD-41AA-B8D3-92F6960D9DA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE564CB0-42BD-41AA-B8D3-92F6960D9DA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE564CB0-42BD-41AA-B8D3-92F6960D9DA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE564CB0-42BD-41AA-B8D3-92F6960D9DA3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

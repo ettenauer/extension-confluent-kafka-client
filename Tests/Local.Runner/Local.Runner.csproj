@@ -5,4 +5,8 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Source\Extension.Confluent.Kafka.Client\Extension.Confluent.Kafka.Client.csproj" />
+  </ItemGroup>
+
 </Project>

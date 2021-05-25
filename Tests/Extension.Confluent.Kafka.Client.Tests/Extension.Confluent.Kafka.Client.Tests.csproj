@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Extension.Confluent.Kafka.Client\Extension.Confluent.Kafka.Client.csproj" />
+    <ProjectReference Include="..\..\Source\Extension.Confluent.Kafka.Client\Extension.Confluent.Kafka.Client.csproj" />
   </ItemGroup>
 
 </Project>
