@@ -24,7 +24,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy
             this.getChannelIdFunc = getChannelIdFunc ?? throw new ArgumentNullException(nameof(getChannelIdFunc));
         }
 
-        public bool CreateOrGet(ConsumeResult<TKey, TValue> result, out ConsumeResultChannel<TKey, TValue> channel)
+        public bool CreateOrGet(ConsumeResult<TKey, TValue> result, out IConsumeResultChannel<TKey, TValue> channel)
         {
             //IMPORTANT: the internal channel id calculate based modulo of channel count setting in order to control required resources
             var internalChannelId = getChannelIdFunc(result) % maxTaskCount;
@@ -42,7 +42,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy
             return false;
         }
 
-        public void Remove(ConsumeResultChannel<TKey, TValue> channel)
+        public void Remove(IConsumeResultChannel<TKey, TValue> channel)
         {
             channels.TryRemove(channel.Id, out var _);
         }

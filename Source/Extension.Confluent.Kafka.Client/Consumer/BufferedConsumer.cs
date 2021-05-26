@@ -1,4 +1,5 @@
 ﻿using Confluent.Kafka;
+using Extension.Confluent.Kafka.Client.Builder;
 using Extension.Confluent.Kafka.Client.Configuration;
 using Extension.Confluent.Kafka.Client.Consumer.Builder;
 using Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy;
@@ -37,8 +38,8 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         private CancellationTokenSource? cts;
         private bool connectionHealthy = false;
 
-        public BufferedConsumer(IConsumerBuilderWrapper<TKey, TValue> internalConsumerBuilder,
-            IAdminClient adminClient,
+        public BufferedConsumer(IConsumerBuilderWrapper<TKey, TValue> consumerBuilder,
+            IAdminClientBuilderWrapper adminClientBuilder,
             Func<IConsumer<TKey, TValue>, IOffsetStore<TKey, TValue>> createOffsetStoreFunc,
             IDispatcherStrategy<TKey, TValue> dispatcherStrategy,
             IConsumeResultCallback<TKey, TValue>? callback,
@@ -47,16 +48,17 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             BufferedConsumerConfig configuration,
             ILogger logger)
         {
-            if (internalConsumerBuilder == null) throw new ArgumentNullException(nameof(internalConsumerBuilder));
+            if (consumerBuilder == null) throw new ArgumentNullException(nameof(consumerBuilder));
+            if (adminClientBuilder == null) throw new ArgumentNullException(nameof(adminClientBuilder));
             if (createOffsetStoreFunc == null) throw new ArgumentNullException(nameof(createOffsetStoreFunc));
 
             //Note: create interface 
-            this.internalConsumer = internalConsumerBuilder
+            this.internalConsumer = consumerBuilder
                     .SetPartitionsAssignedHandler((_, list) => AssignPartitionsCallback(list))
                     .SetPartitionsRevokedHandler((_, list) => RevokePartitionsCallback(list))
-                .Build();
+                .Build() ?? throw new ArgumentNullException(nameof(internalConsumer));
 
-            this.adminClient = adminClient ?? throw new ArgumentNullException(nameof(adminClient));
+            this.adminClient = adminClientBuilder.Build() ?? throw new ArgumentNullException(nameof(adminClient));
             this.offsetStore = createOffsetStoreFunc(this.internalConsumer) ?? throw new ArgumentException($"invalid {nameof(createOffsetStoreFunc)} func");
             this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             this.healthStatusCallback = healthStatusCallback ?? throw new ArgumentNullException(nameof(healthStatusCallback));

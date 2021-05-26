@@ -77,7 +77,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             return false;
         }
 
-        private Task CreateWorkerTask(ConsumeResultChannel<TKey, TValue> channel, CancellationToken cancellationToken)
+        private Task CreateWorkerTask(IConsumeResultChannel<TKey, TValue> channel, CancellationToken cancellationToken)
         {
             var worker = new ConsumeResultChannelWorker<TKey, TValue>(channel, callback, configuration, logger);
 

@@ -2,8 +2,8 @@
 {
     public class BufferedTopicConfig
     {
-        public string TopicName { get; set; } = null!;
+        public string TopicName { get; init; } = null!;
 
-        public byte Priority { get; set; }
+        public byte Priority { get; init; }
     }
 }

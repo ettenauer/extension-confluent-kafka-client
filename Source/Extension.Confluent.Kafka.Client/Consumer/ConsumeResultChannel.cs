@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Extension.Confluent.Kafka.Client.Consumer
 {
-    internal class ConsumeResultChannel<TKey, TValue>
+    internal class ConsumeResultChannel<TKey, TValue> : IConsumeResultChannel<TKey, TValue>
     {
         private readonly Channel<ConsumeResult<TKey, TValue>>[] channels;
 

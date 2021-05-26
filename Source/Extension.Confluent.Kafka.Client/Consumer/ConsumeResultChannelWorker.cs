@@ -9,13 +9,13 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 {
     internal class ConsumeResultChannelWorker<TKey, TValue>
     {
-        private readonly ConsumeResultChannel<TKey, TValue> channel;
+        private readonly IConsumeResultChannel<TKey, TValue> channel;
         private readonly ConsumeResultChannelWorkerConfig configuration;
         private readonly IConsumeResultCallback<TKey, TValue> callback;
         private readonly ILogger logger;
         
 
-        public ConsumeResultChannelWorker(ConsumeResultChannel<TKey, TValue> channel, 
+        public ConsumeResultChannelWorker(IConsumeResultChannel<TKey, TValue> channel, 
             IConsumeResultCallback<TKey, TValue> callback,
             ConsumeResultChannelWorkerConfig configuration,
             ILogger logger)

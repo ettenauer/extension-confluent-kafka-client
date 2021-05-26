@@ -21,7 +21,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy
             this.channels = new ConcurrentDictionary<long, ConsumeResultChannel<TKey, TValue>>();
         }
 
-        public bool CreateOrGet(ConsumeResult<TKey, TValue> message, out ConsumeResultChannel<TKey, TValue> workerChannel)
+        public bool CreateOrGet(ConsumeResult<TKey, TValue> message, out IConsumeResultChannel<TKey, TValue> workerChannel)
         {
             if (!channels.ContainsKey(ChannelId))
             {
@@ -37,7 +37,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy
             return false;
         }
 
-        public void Remove(ConsumeResultChannel<TKey, TValue> workerChannel)
+        public void Remove(IConsumeResultChannel<TKey, TValue> workerChannel)
         {
             channels.TryRemove(workerChannel.Id, out var _);
         }
