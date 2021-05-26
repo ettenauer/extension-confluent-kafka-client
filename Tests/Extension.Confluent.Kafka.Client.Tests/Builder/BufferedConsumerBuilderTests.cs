@@ -18,11 +18,23 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
     [TestFixture]
     public class BufferedConsumerBuilderTests
     {
+        private BufferedConsumerConfig config;
 
         [SetUp]
         public void SetUp()
         {
-
+            config = new BufferedConsumerConfig
+            {
+                BufferSizePerChannel = 1,
+                BufferSharding = BufferSharding.Single,
+                TopicConfigs = new List<BufferedTopicConfig>()
+                {
+                    new BufferedTopicConfig
+                    {
+                        TopicName = "Test"
+                    }
+                }
+            };
         }
 
         [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetConsumerBuilder))]
@@ -39,19 +51,6 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
 
             mandatoryDependencies[missingDependency] = (b) => b;
 
-            var config = new BufferedConsumerConfig
-            {
-                BufferSizePerChannel = 1,
-                BufferSharding = BufferSharding.Single,
-                TopicConfigs = new List<BufferedTopicConfig>()
-                {
-                    new BufferedTopicConfig
-                    {
-                        TopicName = "Test"
-                    }
-                }
-            };
-
             var builder = new BufferedConsumerBuilderWithMock(config);
 
             foreach(var dependency in mandatoryDependencies)
@@ -64,11 +63,24 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
 
         [Test]
         public void Build_MandatoryDependenciesExists_NewConsumer()
+        {       
+            var builder = new BufferedConsumerBuilderWithMock(config)
+                .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
+                .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
+                .SetLogger(new Mock<ILogger>().Object)
+                .Build();
+
+            Assert.That(builder, Is.Not.Null);         
+        }
+
+        [Test]
+        public void Build_BufferingTaskWrongBufferMaxTaskCount_ThrowException()
         {
-            var config = new BufferedConsumerConfig
+            config = new BufferedConsumerConfig
             {
                 BufferSizePerChannel = 1,
-                BufferSharding = BufferSharding.Single,
+                BufferMaxTaskCount = 0,          
+                BufferSharding = BufferSharding.Task,
                 TopicConfigs = new List<BufferedTopicConfig>()
                 {
                     new BufferedTopicConfig
@@ -81,22 +93,35 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
             var builder = new BufferedConsumerBuilderWithMock(config)
                 .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
                 .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
-                .SetLogger(new Mock<ILogger>().Object)
-                .Build();
+                .SetChannelIdFunc((x) => x.Partition)
+                .SetLogger(new Mock<ILogger>().Object);
 
-            Assert.That(builder, Is.Not.Null);         
+            Assert.Throws<ArgumentException>(() => builder.Build());
         }
 
         [Test]
-        public void Build_WrongBufferShardingTaskSetup_Exception()
+        public void Build_BufferShardingMissingChannelIdSetup_ThrowException()
         {
-     
-        }
+            config = new BufferedConsumerConfig
+            {
+                BufferSizePerChannel = 1,
+                BufferMaxTaskCount = 5,
+                BufferSharding = BufferSharding.Task,
+                TopicConfigs = new List<BufferedTopicConfig>()
+                {
+                    new BufferedTopicConfig
+                    {
+                        TopicName = "Test"
+                    }
+                }
+            };
 
-        [Test]
-        public void Build_BufferSharding_ExpectedOffsetStore()
-        {
+            var builder = new BufferedConsumerBuilderWithMock(config)
+                .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
+                .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
+                .SetLogger(new Mock<ILogger>().Object);
 
+            Assert.Throws<ArgumentException>(() => builder.Build());
         }
 
         [Test]
