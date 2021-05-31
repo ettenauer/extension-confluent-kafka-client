@@ -20,9 +20,9 @@ namespace Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy
             this.channels = new ConcurrentDictionary<long, ConsumeResultChannel<TKey, TValue>>();
         }
 
-        public bool CreateOrGet(ConsumeResult<TKey, TValue> message, out IConsumeResultChannel<TKey, TValue> workerChannel)
+        public bool CreateOrGet(ConsumeResult<TKey, TValue> result, out IConsumeResultChannel<TKey, TValue> workerChannel)
         {
-            var channelId = message.TopicPartition.Partition.Value;
+            var channelId = result.TopicPartition.Partition.Value;
 
             if (!channels.ContainsKey(channelId))
             {

@@ -6,9 +6,9 @@ namespace Extension.Confluent.Kafka.Client.Configuration
     {
         public BufferSharding BufferSharding { get; init; }
 
-        public int? BufferMaxTaskCount { get; init; }
+        public short? BufferMaxTaskCount { get; init; }
 
-        public int BufferSizePerChannel { get; init; }
+        public short BufferSizePerChannel { get; init; }
 
         public int BufferCommitIntervalInMilliseconds { get; init; }
 

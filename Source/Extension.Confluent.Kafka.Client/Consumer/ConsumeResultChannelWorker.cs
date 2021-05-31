@@ -26,12 +26,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="workerChannel"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         public Task CreateRunTask(CancellationToken cancellationToken)
         {
             return new Task(async () =>

@@ -8,11 +8,11 @@ namespace Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy
     {
         private readonly ConcurrentDictionary<long, ConsumeResultChannel<TKey, TValue>> channels;
         private readonly Func<ConsumeResult<TKey, TValue>, long> getChannelIdFunc;
-        private readonly int channelSize;
+        private readonly short channelSize;
         private readonly byte priorityChannelCount;
-        private readonly int maxTaskCount;
+        private readonly short maxTaskCount;
 
-        public TaskStrategy(Func<ConsumeResult<TKey, TValue>, long> getChannelIdFunc, int channelSize, byte priorityChannelCount, int maxTaskCount)
+        public TaskStrategy(Func<ConsumeResult<TKey, TValue>, long> getChannelIdFunc, short channelSize, byte priorityChannelCount, short maxTaskCount)
         {
             if (channelSize < 1) throw new ArgumentException($"{nameof(channelSize)} has to be > 0");
             if (priorityChannelCount < 1) throw new ArgumentException($"{nameof(priorityChannelCount)} has to be > 0");

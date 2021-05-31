@@ -40,7 +40,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
         [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetConsumerBuilder))]
         [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetLogger))]
         [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetAdminBuilder))]
-        public void Build_MandatoryDependenciesMissing_ThrowException(string missingDependency)
+        public void Build_MandatorySetupNotExists_ThrowException(string missingDependency)
         {
             var mandatoryDependencies = new Dictionary<string, Func<BufferedConsumerBuilderWithMock, BufferedConsumerBuilderWithMock>>()
             {
@@ -61,8 +61,37 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
             Assert.Throws<ArgumentException>(() => builder.Build());
         }
 
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetConsumerBuilder))]
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetAdminBuilder))]
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetLogger))]
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetCallback))]
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetChannelIdFunc))]
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetHealthStatusCallback))]
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetMetricsCallback))]
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetPartitionsAssignedHandler))]
+        [TestCase(nameof(BufferedConsumerBuilder<byte[], byte[]>.SetPartitionsRevokedHandler))]
+        public void Build_SetupInvalidArgument_ThrowException(string setupMethod)
+        {
+            var invalidArgumentSetup = new Dictionary<string, Func<BufferedConsumerBuilderWithMock, BufferedConsumerBuilderWithMock>>()
+            {
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetConsumerBuilder), (b) => (BufferedConsumerBuilderWithMock)b.SetConsumerBuilder(null)},
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetAdminBuilder), (b) => (BufferedConsumerBuilderWithMock)b.SetAdminBuilder(null) },
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetLogger), (b) => (BufferedConsumerBuilderWithMock)b.SetLogger(null)},
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetCallback), (b) => (BufferedConsumerBuilderWithMock)b.SetCallback(null)},
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetChannelIdFunc), (b) => (BufferedConsumerBuilderWithMock)b.SetChannelIdFunc(null)},
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetHealthStatusCallback), (b) => (BufferedConsumerBuilderWithMock)b.SetHealthStatusCallback(null)},
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetMetricsCallback), (b) => (BufferedConsumerBuilderWithMock)b.SetMetricsCallback(null)},
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetPartitionsAssignedHandler), (b) => (BufferedConsumerBuilderWithMock)b.SetPartitionsAssignedHandler(null)},
+                { nameof(BufferedConsumerBuilder<byte[], byte[]>.SetPartitionsRevokedHandler), (b) => (BufferedConsumerBuilderWithMock)b.SetPartitionsRevokedHandler(null)},
+            };
+
+            var builder = new BufferedConsumerBuilderWithMock(config);
+
+            Assert.Throws<ArgumentNullException>(() => invalidArgumentSetup[setupMethod](builder));
+        }
+
         [Test]
-        public void Build_MandatoryDependenciesExists_NewConsumer()
+        public void Build_MandatorySetupExists_NewConsumer()
         {       
             var builder = new BufferedConsumerBuilderWithMock(config)
                 .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
@@ -73,65 +102,151 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
             Assert.That(builder, Is.Not.Null);         
         }
 
-        [Test]
-        public void Build_BufferingTaskWrongBufferMaxTaskCount_ThrowException()
+        [TestCase(nameof(BufferedConsumerConfig.BufferMaxTaskCount))]
+        [TestCase(nameof(BufferedConsumerBuilderWithMock.SetChannelIdFunc))]
+        public void Build_IncorrectSetupShardingTask_ThrowException(string setup)
         {
-            config = new BufferedConsumerConfig
-            {
-                BufferSizePerChannel = 1,
-                BufferMaxTaskCount = 0,          
-                BufferSharding = BufferSharding.Task,
-                TopicConfigs = new List<BufferedTopicConfig>()
-                {
-                    new BufferedTopicConfig
-                    {
-                        TopicName = "Test"
-                    }
-                }
-            };
+            var channelIdSetupFunc = new Func<BufferedConsumerBuilderWithMock, BufferedConsumerBuilderWithMock>(
+                c => (BufferedConsumerBuilderWithMock)c.SetChannelIdFunc(x => x.Partition)
+                );
 
+            switch (setup)
+            {
+                case nameof(BufferedConsumerConfig.BufferMaxTaskCount):
+                    config = new BufferedConsumerConfig
+                    {
+                        BufferSizePerChannel = 1,
+                        BufferMaxTaskCount = 0,
+                        BufferSharding = BufferSharding.Task,
+                        TopicConfigs = new List<BufferedTopicConfig>()
+                        {
+                            new BufferedTopicConfig
+                            {
+                                TopicName = "Test"
+                            }
+                        }
+                    };
+                    break;
+                case nameof(BufferedConsumerBuilderWithMock.SetChannelIdFunc):
+                    config = new BufferedConsumerConfig
+                    {
+                        BufferSizePerChannel = 1,
+                        BufferMaxTaskCount = 2,
+                        BufferSharding = BufferSharding.Task,
+                        TopicConfigs = new List<BufferedTopicConfig>()
+                        {
+                            new BufferedTopicConfig
+                            {
+                                TopicName = "Test"
+                            }
+                        }
+                    };
+                    channelIdSetupFunc = new Func<BufferedConsumerBuilderWithMock, BufferedConsumerBuilderWithMock>(c => c);
+                    break;
+            }
+       
             var builder = new BufferedConsumerBuilderWithMock(config)
                 .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
                 .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
-                .SetChannelIdFunc((x) => x.Partition)
                 .SetLogger(new Mock<ILogger>().Object);
+
+            builder = channelIdSetupFunc((BufferedConsumerBuilderWithMock) builder);
 
             Assert.Throws<ArgumentException>(() => builder.Build());
         }
 
-        [Test]
-        public void Build_BufferShardingMissingChannelIdSetup_ThrowException()
+        [TestCase(BufferSharding.Parition)]
+        [TestCase(BufferSharding.Task)]
+        [TestCase(BufferSharding.Single)]
+        public void Build_ConfiguredSharding_ExpectedDispatcherStrategy(BufferSharding sharding)
         {
             config = new BufferedConsumerConfig
             {
                 BufferSizePerChannel = 1,
-                BufferMaxTaskCount = 5,
-                BufferSharding = BufferSharding.Task,
+                BufferMaxTaskCount = 2,
+                BufferSharding = sharding,
                 TopicConfigs = new List<BufferedTopicConfig>()
-                {
-                    new BufferedTopicConfig
-                    {
-                        TopicName = "Test"
-                    }
-                }
+                        {
+                            new BufferedTopicConfig
+                            {
+                                TopicName = "Test"
+                            }
+                        }
             };
 
-            var builder = new BufferedConsumerBuilderWithMock(config)
+            var builder = (BufferedConsumerBuilderWithMock) new BufferedConsumerBuilderWithMock(config)
                 .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
                 .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
+                .SetChannelIdFunc(p => p.Partition)
                 .SetLogger(new Mock<ILogger>().Object);
 
-            Assert.Throws<ArgumentException>(() => builder.Build());
+            builder.Build();
+
+           switch (config.BufferSharding)
+            {
+                case BufferSharding.Parition:
+                    Assert.That(builder.DispatcherStrategy, Is.AssignableTo(typeof(PartitionStrategy<byte[], byte[]>)));
+                    break;
+                case BufferSharding.Single:
+                    Assert.That(builder.DispatcherStrategy, Is.AssignableTo(typeof(SingleStrategy<byte[], byte[]>)));
+                    break;
+                case BufferSharding.Task:
+                    Assert.That(builder.DispatcherStrategy, Is.AssignableTo(typeof(TaskStrategy<byte[], byte[]>)));
+                    break;
+                default:
+                    Assert.Fail("missing dispatcher strategy");
+                    break;
+            }
         }
 
-        [Test]
-        public void Build_BufferSharding_ExpectedDispatchStrategy()
+        [TestCase(BufferSharding.Parition)]
+        [TestCase(BufferSharding.Task)]
+        [TestCase(BufferSharding.Single)]
+        public void Build_ConfiguredSharding_ExpectedOffsetStore(BufferSharding sharding)
         {
+            config = new BufferedConsumerConfig
+            {
+                BufferSizePerChannel = 1,
+                BufferMaxTaskCount = 2,
+                BufferSharding = sharding,
+                TopicConfigs = new List<BufferedTopicConfig>()
+                        {
+                            new BufferedTopicConfig
+                            {
+                                TopicName = "Test"
+                            }
+                        }
+            };
 
+            var builder = (BufferedConsumerBuilderWithMock)new BufferedConsumerBuilderWithMock(config)
+                .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
+                .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
+                .SetChannelIdFunc(p => p.Partition)
+                .SetLogger(new Mock<ILogger>().Object);
+
+            builder.Build();
+
+            switch (config.BufferSharding)
+            {
+                case BufferSharding.Parition:
+                case BufferSharding.Single:
+                    Assert.That(builder.OffsetStore, Is.AssignableTo(typeof(DictionaryOffsetStore<byte[],byte[]>)));
+                    break;
+                case BufferSharding.Task:
+                    Assert.That(builder.OffsetStore, Is.AssignableTo(typeof(HeapOffsetStore<byte[], byte[]>)));
+                    break;
+                default:
+                    Assert.Fail("missing offset store");
+                    break;
+            }
         }
 
         private class BufferedConsumerBuilderWithMock : BufferedConsumerBuilder<byte[], byte[]>
         {
+            public IDispatcherStrategy<byte[], byte[]> DispatcherStrategy { get; set; }
+
+            public IOffsetStore<byte[], byte[]> OffsetStore { get; set; }
+
             public BufferedConsumerBuilderWithMock(BufferedConsumerConfig config) : base(config)
             {
             }
@@ -149,6 +264,8 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
             BufferedConsumerConfig config,
             ILogger logger)
             {
+                DispatcherStrategy = dispatcherStrategy;
+                OffsetStore = createOffsetStoreFunc(new Mock<IConsumer<byte[], byte[]>>().Object);
                 return new Mock<IBufferedConsumer<byte[], byte[]>>().Object;
             }
         }

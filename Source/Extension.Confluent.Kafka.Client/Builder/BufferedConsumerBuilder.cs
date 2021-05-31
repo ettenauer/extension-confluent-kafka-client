@@ -45,19 +45,19 @@ namespace Extension.Confluent.Kafka.Client.Consumer.Builder
 
         public BufferedConsumerBuilder<TKey, TValue> SetHealthStatusCallback(IHealthStatusCallback healthStatusCallback)
         {
-            this.healthStatusCallback = healthStatusCallback;
+            this.healthStatusCallback = healthStatusCallback ?? throw new ArgumentNullException(nameof(healthStatusCallback));
             return this;
         }
 
         public BufferedConsumerBuilder<TKey, TValue> SetCallback(IConsumeResultCallback<TKey, TValue> callback)
         {
-            this.callback = callback;
+            this.callback = callback ?? throw new ArgumentNullException(nameof(callback));
             return this;
         }
 
         public BufferedConsumerBuilder<TKey, TValue> SetMetricsCallback(IMetricsCallback metricsCallback)
         {
-            this.metricsCallback = metricsCallback;
+            this.metricsCallback = metricsCallback ?? throw new ArgumentNullException(nameof(metricsCallback));
             return this;
         }
 
