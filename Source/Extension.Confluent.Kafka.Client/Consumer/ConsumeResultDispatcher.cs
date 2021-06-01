@@ -56,6 +56,12 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                     }
 
                     workerTask.Start();
+                    //Note: attach cleanup for terminated worker
+                    _ = workerTask.ContinueWith((token) =>
+                                         {
+                                             workers.TryRemove(channel.Id, out _);
+                                             dispatcherStrategy.Remove(channel);
+                                         });
                     return true;
                 }
 
@@ -80,14 +86,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         private Task CreateWorkerTask(IConsumeResultChannel<TKey, TValue> channel, CancellationToken cancellationToken)
         {
             var worker = new ConsumeResultChannelWorker<TKey, TValue>(channel, callback, configuration, logger);
-
-            //Note: attach cleanup for terminated worker
-            return worker.CreateRunTask(cancellationToken)
-                .ContinueWith((token) =>
-                {
-                    workers.TryRemove(channel.Id, out var _);
-                    dispatcherStrategy.Remove(channel);
-                });     
+            return worker.CreateRunTask(cancellationToken);
         }
     }
 }

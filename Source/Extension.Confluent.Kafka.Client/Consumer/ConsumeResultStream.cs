@@ -1,5 +1,6 @@
 ﻿using Confluent.Kafka;
 using Extension.Confluent.Kafka.Client.Configuration;
+using Extension.Confluent.Kafka.Client.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -14,18 +15,19 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
         private List<TopicPartition>? assignedTopicPartitions;
 
-        private readonly IEnumerable<BufferedTopicConfig> configuration;
+        private readonly Dictionary<string, byte> priorityByTopic;
 
         public ConsumeResultStream(IConsumer<TKey, TValue> consumer, IEnumerable<BufferedTopicConfig> configuration, ILogger logger)
         {
             this.consumer = consumer ?? throw new ArgumentNullException(nameof(consumer));
-            this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            this.logger = logger ?? throw new ArgumentException(nameof(logger));
+            if(configuration == null)throw new ArgumentNullException(nameof(configuration));
+            this.priorityByTopic = configuration.ToDictionary(_ => _.TopicName, _ => _.Priority);
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public void Subscribe()
         {
-            consumer.Subscribe(configuration.Select(s => s.TopicName));
+            consumer.Subscribe(priorityByTopic.Keys);
         }
 
         public void Unsubscribe()
@@ -43,35 +45,31 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             assignedTopicPartitions = assignedTopicPartitions?.Except(topicPartitions.Select(_ => _.TopicPartition)).ToList();
         }
 
-        public IList<TopicPartition> GetAssignment()
-        {
-            return consumer.Assignment;
-        }
-
-        public WatermarkOffsets QueryWatermarkOffsets(TopicPartition topicPartition)
-        {
-            return consumer.GetWatermarkOffsets(topicPartition);
-        }
-
         public IEnumerable<ConsumeResult<TKey, TValue>> Consume(TimeSpan timeout)
         {
             var newResult = consumer.Consume(timeout);
             if (newResult != null)
             {
+                //Note: add here priority to Header for downstream processing
+                if (newResult.Message.Headers != null && priorityByTopic.ContainsKey(newResult.Topic))
+                {
+                    _ = newResult.Message.Headers.AddTopicPriority(priorityByTopic[newResult.Topic]);
+                }
+
                 yield return newResult;
             }
         }
 
-        public TopicPartitionOffset? Pause(ConsumeResult<TKey, TValue> message)
+        public TopicPartitionOffset? Pause(ConsumeResult<TKey, TValue> result)
         {
-            var topicPartition = assignedTopicPartitions?.Where(k => k.Topic == message.Topic && k.Partition == message.Partition);
+            var topicPartition = assignedTopicPartitions?.Where(k => k.Topic == result.Topic && k.Partition == result.Partition);
             if (topicPartition != null && topicPartition.Any())
             {
                 consumer.Pause(topicPartition);
-                return message.TopicPartitionOffset;
+                return result.TopicPartitionOffset;
             }
 
-            logger.LogWarning($"Pause discarded since no assigned TopicPartition for {message.TopicPartition}");
+            logger.LogWarning($"Pause discarded since no assigned TopicPartition for {result.TopicPartition}");
             return null;
         }
 

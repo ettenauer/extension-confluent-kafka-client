@@ -13,20 +13,28 @@ namespace Extension.Confluent.Kafka.Client.Extensions
 
         public static long? GetWorkerChannelId(this Headers headers)
         {
-            headers.TryGetLastBytes(HeaderFields.WorkerChannelId, out var bytes);
-            return bytes.Length == 4 ? BitConverter.ToInt64(bytes) : (long?) null;
+            if(headers.TryGetLastBytes(HeaderFields.WorkerChannelId, out var bytes))
+            {
+                return bytes.Length == 8 ? BitConverter.ToInt64(bytes) : (long?)null;
+            }
+
+            return null;
         }
 
         public static Headers AddTopicPriority(this Headers headers, byte priority)
         {
-            headers.Add(new Header(HeaderFields.TopicPriority, BitConverter.GetBytes(priority)));
+            headers.Add(new Header(HeaderFields.TopicPriority, new byte[] { priority }));
             return headers;
         }
 
         public static byte? GetTopicPriority(this Headers headers)
         {
-            headers.TryGetLastBytes(HeaderFields.WorkerChannelId, out var bytes);
-            return bytes.Length == 1 ? bytes[0] : (byte?) null;
+            if (headers.TryGetLastBytes(HeaderFields.TopicPriority, out var bytes))
+            {
+                return bytes.Length == 1 ? bytes[0] : (byte?)null;
+            }
+
+            return null;
         }
     }
 }

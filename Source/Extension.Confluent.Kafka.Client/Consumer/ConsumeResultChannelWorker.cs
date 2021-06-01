@@ -35,11 +35,13 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 var memoryOwner = MemoryPool<ConsumeResult<TKey, TValue>>.Shared.Rent(configuration.CallbackResultCount);
                 try
                 {
-                    while (await channel.WaitToReadAsync(workerCts.Token).ConfigureAwait(false))
+                    while (!workerCts.IsCancellationRequested && await channel.WaitToReadAsync(workerCts.Token).ConfigureAwait(false))
                     {
                         workerCts.Cancel();
                         workerCts.Dispose();
-                        //    logger.Log(LogLevel.Debug, 0, this, null, ((d, e) => "Worker token was cancelled."));
+
+                        logger.LogDebug("Worker token was cancelled.");
+
                         workerCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
                         //IMPORTANT:
@@ -60,7 +62,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                             }
                         }
 
-                        if (!bufferedResults.IsEmpty)
+                        if (index > 0)
                         {
                             await callback.OnReceivedAsync(bufferedResults.Slice(0, index), cancellationToken).ConfigureAwait(false);
                         }
@@ -80,6 +82,8 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                     workerCts?.Dispose();
                     memoryOwner.Dispose();
                 }
+
+                logger.LogInformation($"work {channel.Id} terminated");
             });
         }
     }
