@@ -2,8 +2,14 @@
 {
     public class BufferedTopicConfig
     {
+        /// <summary>
+        /// Kafka Topic Name
+        /// </summary>
         public string TopicName { get; init; } = null!;
 
-        public byte Priority { get; init; }
+        /// <summary>
+        /// Topic Priority for consumption. Lower value means higher priority.
+        /// </summary>
+        public byte Priority { get; init; } = 0;
     }
 }
