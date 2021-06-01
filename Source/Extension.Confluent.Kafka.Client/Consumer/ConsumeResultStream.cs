@@ -51,7 +51,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             if (newResult != null)
             {
                 //Note: add here priority to Header for downstream processing
-                if (newResult.Message.Headers != null && priorityByTopic.ContainsKey(newResult.Topic))
+                if (newResult.Message?.Headers != null && priorityByTopic.ContainsKey(newResult.Topic))
                 {
                     _ = newResult.Message.Headers.AddTopicPriority(priorityByTopic[newResult.Topic]);
                 }

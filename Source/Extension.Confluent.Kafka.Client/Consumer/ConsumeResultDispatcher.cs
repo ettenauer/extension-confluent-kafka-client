@@ -36,11 +36,11 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         {
             do
             {
-                var priority = result.Message.Headers.GetTopicPriority() ?? DefaultPriority;
+                var priority = result.Message?.Headers?.GetTopicPriority() ?? DefaultPriority;
 
                 if (dispatcherStrategy.CreateOrGet(result, out var channel))
                 {
-                    result.Message.Headers.AddWorkerChannelId(channel.Id);
+                    result.Message?.Headers?.AddWorkerChannelId(channel.Id);
 
                     //Note: work should only be canceled by dispose
                     var workerTask = CreateWorkerTask(channel, cancellationToken);
@@ -66,7 +66,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 }
 
                 //Note: header doesn't have to be unique, in order to simplify logic we add header again in case of retry
-                result.Message.Headers.AddWorkerChannelId(channel.Id);
+                result.Message?.Headers?.AddWorkerChannelId(channel.Id);
 
                 //Note: we allow one retry in order to prevent impact on short hickup 
                 if (!channel.TryWrite(result, priority))

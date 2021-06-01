@@ -1,7 +1,6 @@
 ﻿using Confluent.Kafka;
 using Extension.Confluent.Kafka.Client.Builder;
 using Extension.Confluent.Kafka.Client.Configuration;
-using Extension.Confluent.Kafka.Client.Consumer.Builder;
 using Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy;
 using Extension.Confluent.Kafka.Client.Health;
 using Extension.Confluent.Kafka.Client.Metrics;
@@ -54,12 +53,12 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
             //Note: create interface 
             this.internalConsumer = consumerBuilder
-                    .SetPartitionsAssignedHandler((_, list) => AssignPartitionsCallback(list))
-                    .SetPartitionsRevokedHandler((_, list) => RevokePartitionsCallback(list))
+                    .SetPartitionsAssignedHandler((_, list) => StartMessageLoopOnAssign(list))
+                    .SetPartitionsRevokedHandler((_, list) => CommittOffsetsOnRevoke(list))
                 .Build() ?? throw new ArgumentNullException(nameof(internalConsumer));
 
             this.adminClient = adminClientBuilder.Build() ?? throw new ArgumentNullException(nameof(adminClient));
-            this.offsetStore = createOffsetStoreFunc(this.internalConsumer) ?? throw new ArgumentException($"invalid {nameof(createOffsetStoreFunc)} func");
+            this.offsetStore = createOffsetStoreFunc?.Invoke(this.internalConsumer) ?? throw new ArgumentException($"invalid {nameof(createOffsetStoreFunc)} func");
             this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             this.healthStatusCallback = healthStatusCallback ?? throw new ArgumentNullException(nameof(healthStatusCallback));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -70,6 +69,9 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 logger);
             this.stream = new ConsumeResultStream<TKey, TValue>(internalConsumer, configuration.TopicConfigs, logger);
             this.subscribedTopics = new HashSet<string>(configuration.TopicConfigs.Select(_ => _.TopicName));
+
+            if (subscribedTopics.Count != this.configuration.TopicConfigs.Count())
+                throw new ArgumentException("Invalid configuration, duplicated topics detected. Please check provided configuration.");
         }
 
         private Task StartMessageLoopTask()
@@ -109,7 +111,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                         foreach (var result in stream.Consume(TimeSpan.FromSeconds(ConsumeTimeoutSeconds)))
                         {
                             if (!subscribedTopics.Contains(result.Topic))
-                                return;
+                                continue;
 
                             try
                             {
@@ -234,7 +236,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             this.offsetStore.Dispose();
         }
 
-        private void AssignPartitionsCallback(IEnumerable<TopicPartition> assignedPartitions)
+        private void StartMessageLoopOnAssign(IEnumerable<TopicPartition> assignedPartitions)
         {
             if (stream == null) throw new InvalidOperationException($"{nameof(stream)} not initialized");
 
@@ -256,7 +258,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             }
         }
 
-        private void RevokePartitionsCallback(IEnumerable<TopicPartitionOffset> revokedPartitions)
+        private void CommittOffsetsOnRevoke(IEnumerable<TopicPartitionOffset> revokedPartitions)
         {
             if (stream == null) throw new InvalidOperationException($"{nameof(stream)} not initialized");
 
