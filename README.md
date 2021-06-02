@@ -1,7 +1,12 @@
 # extension-confluent-kafka-client
+
+<!--#if GitHubActions-->
+[![GitHub Actions Status](https://github.com/ettenauer/extension-confluent-kafka-client/github/workflows/main.yml/badge.svg?branch=main)](https://github.com/ettenauer/extension-confluent-kafka-client/actions)
+
 The project adds addtional functionalty to [confluent-kafka-dotnet] https://github.com/confluentinc/confluent-kafka-dotnet by adding an abstraction layer with buffering on top.
 
-**IMPORTANT**: All additional functionalities are **restricted to a AtLeastOnce** consumpution pattern, otherwise the underlying buffering concept will cause side-effects.
+### IMPORTANT ##
+All additional functionalities are **restricted to a AtLeastOnce** consumpution pattern, otherwise the underlying buffering concept will cause side-effects.
 
 ## Extended Functionality
 
@@ -43,32 +48,32 @@ var confluentConfig = new ConsumerConfig
     EnableAutoCommit = false
     };
 
-    //Note: actual configuration for buffered consumer
-    var config = new BufferedConsumerConfig
+//Note: actual configuration for buffered consumer
+var config = new BufferedConsumerConfig
+{
+    BufferSharding = BufferSharding.Task,
+    BufferMaxTaskCount = 5,
+    TopicConfigs = new[]
     {
-        BufferSharding = BufferSharding.Task,
-        BufferMaxTaskCount = 5,
-        TopicConfigs = new[]
+        new BufferedTopicConfig
         {
-            new BufferedTopicConfig
-            {
-                TopicName = "testTopic"
-            }
+            TopicName = "testTopic"
         }
-    };
+    }
+};
 
-    var consumer = new BufferedConsumerBuilder<byte[], byte[]>(config)
-        .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(confluentConfig))
-        .SetAdminBuilder(new AdminClientBuilder(confluentConfig))
-        .SetCallback(this)
-        .SetHealthStatusCallback(this)
-        .SetMetricsCallback(this)
-        .SetChannelIdFunc((p) => p.Partition)
-        .SetLogger(logger)
-        .Build();
+var consumer = new BufferedConsumerBuilder<byte[], byte[]>(config)
+    .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(confluentConfig))
+    .SetAdminBuilder(new AdminClientBuilder(confluentConfig))
+    .SetCallback(this)
+    .SetHealthStatusCallback(this)
+    .SetMetricsCallback(this)
+    .SetChannelIdFunc((p) => p.Partition)
+    .SetLogger(logger)
+    .Build();
 ```
 
-In order to process in received messages ```SetCallback``` needs to be set. Here list of callback interfaces
+In order to process received messages ```SetCallback``` needs to be set. Here is a list of callback interfaces which can be implemented:
 
 - [ConsumeResultCallback](https://github.com/ettenauer/extension-confluent-kafka-client/blob/main/Source/Extension.Confluent.Kafka.Client/Consumer/IConsumeResultCallback.cs)
 - [HealthStatusCallback](https://github.com/ettenauer/extension-confluent-kafka-client/blob/main/Source/Extension.Confluent.Kafka.Client/Health/IHealthStatusCallback.cs)
