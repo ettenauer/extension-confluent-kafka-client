@@ -33,40 +33,46 @@ Take a look in the [examples](Tests/Local.Runner/Examples) for usage.
 
 ```csharp
 
-            //Note: confluent configuration see https://github.com/confluentinc/confluent-kafka-dotnet
-            var confluentConfig = new ConsumerConfig
-            {
-                GroupId = "test-group",
-                ClientId = Environment.MachineName,
-                BootstrapServers = "localhost:9092",
-                AutoOffsetReset = AutoOffsetReset.Earliest,
-                EnableAutoCommit = false
-            };
+//Note: confluent configuration see https://github.com/confluentinc/confluent-kafka-dotnet
+var confluentConfig = new ConsumerConfig
+{
+    GroupId = "test-group",
+    ClientId = Environment.MachineName,
+    BootstrapServers = "localhost:9092",
+    AutoOffsetReset = AutoOffsetReset.Earliest,
+    EnableAutoCommit = false
+    };
 
-            //Note: actual configuration for buffered consumer
-            var config = new BufferedConsumerConfig
+    //Note: actual configuration for buffered consumer
+    var config = new BufferedConsumerConfig
+    {
+        BufferSharding = BufferSharding.Task,
+        BufferMaxTaskCount = 5,
+        TopicConfigs = new[]
+        {
+            new BufferedTopicConfig
             {
-                BufferSharding = BufferSharding.Task,
-                BufferMaxTaskCount = 5,
-                TopicConfigs = new[]
-                {
-                    new BufferedTopicConfig
-                    {
-                        TopicName = "testTopic"
-                    }
-                }
-            };
+                TopicName = "testTopic"
+            }
+        }
+    };
 
-            consumer = new BufferedConsumerBuilder<byte[], byte[]>(config)
-                .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(confluentConfig))
-                .SetAdminBuilder(new AdminClientBuilder(confluentConfig))
-                .SetCallback(this)
-                .SetHealthStatusCallback(this)
-                .SetMetricsCallback(this)
-                .SetChannelIdFunc((p) => p.Partition)
-                .SetLogger(logger)
-                .Build();
+    var consumer = new BufferedConsumerBuilder<byte[], byte[]>(config)
+        .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(confluentConfig))
+        .SetAdminBuilder(new AdminClientBuilder(confluentConfig))
+        .SetCallback(this)
+        .SetHealthStatusCallback(this)
+        .SetMetricsCallback(this)
+        .SetChannelIdFunc((p) => p.Partition)
+        .SetLogger(logger)
+        .Build();
 ```
+
+In order to process in received messages ```SetCallback``` needs to be set. Here list of callback interfaces
+
+- [ConsumeResultCallback](https://github.com/ettenauer/extension-confluent-kafka-client/blob/main/Source/Extension.Confluent.Kafka.Client/Consumer/IConsumeResultCallback.cs)
+- [HealthStatusCallback](https://github.com/ettenauer/extension-confluent-kafka-client/blob/main/Source/Extension.Confluent.Kafka.Client/Health/IHealthStatusCallback.cs)
+- [MetricsCallback](https://github.com/ettenauer/extension-confluent-kafka-client/tree/main/Source/Extension.Confluent.Kafka.Client/Metrics)
 
 ## Configuration
 
