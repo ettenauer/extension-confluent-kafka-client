@@ -1,7 +1,6 @@
 # extension-confluent-kafka-client
 
-<!--#if GitHubActions-->
-[![GitHub Actions Status](https://github.com/ettenauer/extension-confluent-kafka-client/github/workflows/main.yml/badge.svg?branch=main)](https://github.com/ettenauer/extension-confluent-kafka-client/actions)
+![build](https://github.com/ettenauer/extension-confluent-kafka-client/actions/workflows/build.yml/badge.svg?branch=main)
 
 The project adds addtional functionalty to [confluent-kafka-dotnet] https://github.com/confluentinc/confluent-kafka-dotnet by adding an abstraction layer with buffering on top.
 
@@ -83,7 +82,7 @@ In order to process received messages ```SetCallback``` needs to be set. Here is
 
 Configuration properties and defaults can be found here [configuration](Source/Extension.Confluent.Kafka.Client/Configuration). 
 
-### Developer Notes
+## Developer Notes
 
 The extension-confluent-kafka-client project is MIT licensed [here](LICENSE).
 
