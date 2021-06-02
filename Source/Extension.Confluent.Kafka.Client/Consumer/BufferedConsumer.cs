@@ -315,7 +315,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 }
                 finally
                 {
-                    metricsCallback?.OnReceived(results.Length, stopwatch.Elapsed);
+                    metricsCallback?.Record(results.Length, stopwatch.Elapsed);
                 }
 
                 //Note: processed message is marked as complete so the offset can be flushed and committed
