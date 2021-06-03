@@ -1,0 +1,38 @@
+on:
+  push:
+    tags:
+    - "v[0-9]+.[0-9]+.[0-9]+-preview[0-9][0-9][0-9]"
+    - "v[0-9]+.[0-9]+.[0-9]+-rc[0-9][0-9][0-9]"
+
+env:
+  # Disable the .NET logo in the console output.
+  DOTNET_NOLOGO: true
+  # Disable the .NET first time experience to skip caching NuGet packages and speed up the build.
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  # Disable sending .NET CLI telemetry to Microsoft.
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # Set the build number in MinVer.
+  MINVERBUILDMETADATA: build.${{github.run_number}}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        dotnet-version: ['5.0.x' ]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Set VERSION from tag
+      run: echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_ENV
+    - name: Build
+      run: dotnet build --configuration Release /p:Version=${VERSION}
+    - name: Test
+      run: dotnet test --configuration Release /p:Version=${VERSION} --no-build
+    - name: Pack
+      run: dotnet pack --configuration Release /p:Version=${VERSION} --no-build --output .
+    - name: Push to https://nuget.pkg.github.com/ettenauer/index.json
+      run: dotnet nuget push Extension.Confluent.Kafka.Client.${VERSION}.nupkg --source https://nuget.pkg.github.com/ettenauer/index.json --api-key ${GITHUB_TOKEN}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

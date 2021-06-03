@@ -15,4 +15,10 @@
     <InternalsVisibleTo Include="Extension.Confluent.Kafka.Client.Tests" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <PackageId>Extension.Confluent.Kafka.Client</PackageId>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/ettenauer/extension-confluent-kafka-client</RepositoryUrl>
+  </PropertyGroup>
+
 </Project>
