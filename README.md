@@ -4,7 +4,7 @@
 
 ![build](https://github.com/ettenauer/extension-confluent-kafka-client/actions/workflows/build.yml/badge.svg?branch=main)
 
-The project adds addtional functionalty to [confluent-kafka-dotnet] https://github.com/confluentinc/confluent-kafka-dotnet by adding an abstraction layer with buffering on top.
+The project adds addtional functionality to [confluent-kafka-dotnet](https://github.com/confluentinc/confluent-kafka-dotnet) by adding an abstraction layer with buffering.
 
 ### IMPORTANT ##
 All additional functionalities are **restricted to a AtLeastOnce** consumpution pattern, otherwise the underlying buffering concept will cause side-effects.
