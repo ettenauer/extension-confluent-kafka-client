@@ -2,7 +2,7 @@
 
 # extension-confluent-kafka-client
 
-![build](https://github.com/ettenauer/extension-confluent-kafka-client/actions/workflows/build.yml/badge.svg?branch=main)
+![build](https://github.com/ettenauer/extension-confluent-kafka-client/actions/workflows/ci.yml/badge.svg?branch=main)
 
 The project adds addtional functionality to [confluent-kafka-dotnet](https://github.com/confluentinc/confluent-kafka-dotnet) by adding an abstraction layer with buffering.
 
