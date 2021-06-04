@@ -23,6 +23,12 @@ namespace Extension.Confluent.Kafka.Client.Tests.OffsetStore
             offsetStore = new HeapOffsetStore<byte[], byte[]>(consumerMock.Object, config);
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            offsetStore.Dispose();
+        }
+
         [Test]
         public void Ctor_ArgumentValidation_ThrowException()
         {

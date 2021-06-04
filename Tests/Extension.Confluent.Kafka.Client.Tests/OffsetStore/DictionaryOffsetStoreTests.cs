@@ -21,6 +21,12 @@ namespace Extension.Confluent.Kafka.Client.Tests.OffsetStore
             offsetStore = new DictionaryOffsetStore<byte[], byte[]>(consumerMock.Object);
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            offsetStore.Dispose();
+        }
+
         [Test]
         public void Ctor_ArgumentValidation_ThrowException()
         {

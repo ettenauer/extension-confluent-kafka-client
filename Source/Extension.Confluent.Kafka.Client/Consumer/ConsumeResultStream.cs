@@ -20,7 +20,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         public ConsumeResultStream(IConsumer<TKey, TValue> consumer, IEnumerable<BufferedTopicConfig> configuration, ILogger logger)
         {
             this.consumer = consumer ?? throw new ArgumentNullException(nameof(consumer));
-            if(configuration == null)throw new ArgumentNullException(nameof(configuration));
+            if(configuration == null) throw new ArgumentNullException(nameof(configuration));
             this.priorityByTopic = configuration.ToDictionary(_ => _.TopicName, _ => _.Priority);
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }

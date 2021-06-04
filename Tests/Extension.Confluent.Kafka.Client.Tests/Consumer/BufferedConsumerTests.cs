@@ -80,12 +80,6 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 loggerMock.Object);
         }
 
-        [TearDown]
-        public void TearDown()
-        {
-            consumer.Dispose();
-        }
-
         [Test]
         public void Ctor_ArgumentValidation_ThrowException()
         {
@@ -196,12 +190,20 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
+
+            //Note: health check is triggered
             healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.Once);
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.Once);
+
+            //Note: callback is triggered
             callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce());
+           
+            //Note: verify if offse store is properly used
+            offsetStoreMock.Verify(_ => _.Store(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()));
+            offsetStoreMock.Verify(_ => _.Complete(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()));
             offsetStoreMock.Verify(_ => _.FlushCommit(), Times.Once);
 
             consumer.Unsubscribe();
@@ -222,14 +224,17 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition>());
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
+
+            //Note: health check is triggered
             healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.Once);
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.Once);
-            callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.Never());
-            offsetStoreMock.Verify(_ => _.FlushCommit(), Times.Once);
+
+            //Note: should not be called since not active TopicParitions
             dispatcherStrategyMock.Verify(_ => _.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel), Times.Never);
+            callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.Never());
 
             consumer.Unsubscribe();
         }
@@ -249,7 +254,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             consumer.Subscribe();
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
             //Note: cancelled by the second subscribe call
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Once);
@@ -258,7 +263,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             await Task.Delay(TimeSpan.FromSeconds(5));
 
-            //Note: cancelled by unsubscribe call
+            //Note: verify cancellation
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Exactly(2));
             internalConsumerMock.Verify(_ => _.Subscribe(It.IsAny<IEnumerable<string>>()), Times.AtLeast(2));
         }
@@ -280,10 +285,33 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             consumer.Unsubscribe();
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
+            //Note: verify cancellation
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Once);
             internalConsumerMock.Verify(_ => _.Unsubscribe(), Times.AtLeast(2));
+        }
+
+        [Test]
+        public async Task Dispose_Destory_CheckOnMessageLoopCancelled()
+        {
+            IConsumeResultChannel<byte[], byte[]> channel = new ConsumeResultChannel<byte[], byte[]>(1, 2, 1);
+            internalConsumerMock.Setup(c => c.Consume(It.IsAny<TimeSpan>()))
+                .Returns(new ConsumeResult<byte[], byte[]> { TopicPartitionOffset = new TopicPartitionOffset("Test1", 1, 1) });
+            dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
+                .Returns(true);
+
+            consumer.Subscribe();
+
+            assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
+
+            consumer.Dispose();
+
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            //Note: verify cancellation
+            healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Once);
+            internalConsumerMock.Verify(_ => _.Unsubscribe(), Times.Once);
         }
 
         [Test]
@@ -314,8 +342,9 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition>());
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
+            //Note: verify cancellation
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
             healthStatusCallbackMock.Verify(_ => _.OnWorkerTaskCancelled(1, It.IsAny<string>()), Times.AtLeastOnce);
 
@@ -330,7 +359,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 .Returns(new ConsumeResult<byte[], byte[]> { TopicPartitionOffset = new TopicPartitionOffset("Test1", 1, 1) });
 
             callbackMock.Setup(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.Delay(TimeSpan.FromSeconds(5)));
+                .Returns(Task.Delay(TimeSpan.FromMilliseconds(500)));
 
             //Note: intial setup for new worker tasks
             dispatcherStrategyMock.SetupSequence(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
@@ -348,13 +377,10 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
             dispatcherStrategyMock.SetupSequence(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
                 .Returns(false);
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeastOnce());
-            healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.Once);
-            healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.AtLeastOnce);
             callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce());
-            offsetStoreMock.Verify(_ => _.FlushCommit(), Times.Once);
             internalConsumerMock.Verify(_ => _.Pause(It.IsAny<IEnumerable<TopicPartition>>()), Times.AtLeastOnce());
             internalConsumerMock.Verify(_ => _.Resume(It.IsAny<IEnumerable<TopicPartition>>()), Times.AtLeastOnce());
 
@@ -376,7 +402,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
             healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.AtLeast(2));
@@ -384,7 +410,36 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.Never);
             healthStatusCallbackMock.Verify(_ => _.OnUnhealthyConnection(It.IsAny<Exception>()), Times.AtLeast(2));
             callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.Never());
-            offsetStoreMock.Verify(_ => _.FlushCommit(), Times.Never);
+
+            consumer.Unsubscribe();
+        }
+
+        [Test]
+        public async Task MessageLoop_ConnectionFailed_ExpectOnUnhealthyConnection()
+        {
+            IConsumeResultChannel<byte[], byte[]> channel = new ConsumeResultChannel<byte[], byte[]>(1, 2, 1);
+            internalConsumerMock.Setup(c => c.Consume(It.IsAny<TimeSpan>()))
+                .Returns(new ConsumeResult<byte[], byte[]> { TopicPartitionOffset = new TopicPartitionOffset("Test1", 1, 1) });
+            dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
+                .Returns(true);
+
+            adminClientMock.Setup(_ => _.GetMetadata(It.IsAny<string>(), It.IsAny<TimeSpan>())).Throws(new Exception("Test Error"));
+
+            consumer.Subscribe();
+
+            assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
+
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
+
+            //Note: health check is triggered
+            healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.Never);
+            healthStatusCallbackMock.Verify(_ => _.OnUnhealthyConnection(It.IsAny<Exception>()), Times.AtLeast(2));
+            healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.Once);
+
+            //Note: callback is triggered
+            callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce());
 
             consumer.Unsubscribe();
         }

@@ -19,10 +19,16 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
     public class BufferedConsumerBuilderTests
     {
         private BufferedConsumerConfig config;
+        private Mock<IHealthStatusCallback> healthStatusCallbackMock;
+        private Mock<IMetricsCallback> metricsCallbackMock;
+        private Mock<IConsumeResultCallback<byte[], byte[]>> callbackMock;
 
         [SetUp]
         public void SetUp()
         {
+            healthStatusCallbackMock = new Mock<IHealthStatusCallback>();
+            metricsCallbackMock = new Mock<IMetricsCallback>();
+            callbackMock = new Mock<IConsumeResultCallback<byte[], byte[]>>();
             config = new BufferedConsumerConfig
             {
                 BufferSizePerChannel = 1,
@@ -144,11 +150,16 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
                     channelIdSetupFunc = new Func<BufferedConsumerBuilderWithMock, BufferedConsumerBuilderWithMock>(c => c);
                     break;
             }
-       
+
             var builder = new BufferedConsumerBuilderWithMock(config)
                 .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
                 .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
-                .SetLogger(new Mock<ILogger>().Object);
+                .SetLogger(new Mock<ILogger>().Object)
+                .SetMetricsCallback(metricsCallbackMock.Object)
+                .SetCallback(callbackMock.Object)
+                .SetHealthStatusCallback(healthStatusCallbackMock.Object)
+                .SetPartitionsAssignedHandler((_, _) => { return; })
+                .SetPartitionsRevokedHandler((_, _) => { return; });
 
             builder = channelIdSetupFunc((BufferedConsumerBuilderWithMock) builder);
 
@@ -174,11 +185,16 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
                         }
             };
 
-            var builder = (BufferedConsumerBuilderWithMock) new BufferedConsumerBuilderWithMock(config)
+            var builder = (BufferedConsumerBuilderWithMock)new BufferedConsumerBuilderWithMock(config)
                 .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
                 .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
                 .SetChannelIdFunc(p => p.Partition)
-                .SetLogger(new Mock<ILogger>().Object);
+                .SetLogger(new Mock<ILogger>().Object)
+                .SetMetricsCallback(metricsCallbackMock.Object)
+                .SetCallback(callbackMock.Object)
+                .SetHealthStatusCallback(healthStatusCallbackMock.Object)
+                .SetPartitionsAssignedHandler((_, _) => { return; })
+                .SetPartitionsRevokedHandler((_, _) => { return; });
 
             builder.Build();
 
@@ -222,7 +238,12 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
                 .SetAdminBuilder(new AdminClientBuilder(new ConsumerConfig()))
                 .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(new ConsumerConfig()))
                 .SetChannelIdFunc(p => p.Partition)
-                .SetLogger(new Mock<ILogger>().Object);
+                .SetLogger(new Mock<ILogger>().Object)
+                .SetMetricsCallback(metricsCallbackMock.Object)
+                .SetCallback(callbackMock.Object)
+                .SetHealthStatusCallback(healthStatusCallbackMock.Object)
+                .SetPartitionsAssignedHandler((_, _) => { return; })
+                .SetPartitionsRevokedHandler((_, _) => { return; });
 
             builder.Build();
 

@@ -94,7 +94,28 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
         }
 
         [Test]
-        public void Consume_QueuedMessages_ExpectPriorityHeader()
+        public void Consume_QueuedMessagesWithHeader_ExpectPriorityHeader()
+        {
+            stream.Assign(new List<TopicPartition>() { new TopicPartition("Test", 1) });
+
+            consumerMock.Setup(_ => _.Consume(It.IsAny<CancellationToken>()))
+                .Returns(new ConsumeResult<byte[], byte[]>
+                {
+                    TopicPartitionOffset = new TopicPartitionOffset("Test", 1, 2),
+                    Message = new Message<byte[], byte[]>
+                    {
+                        Headers = new Headers()
+                    }
+                });
+
+            foreach (var result in stream.Consume(TimeSpan.FromSeconds(1)))
+            {
+                Assert.That(result.Message.Headers.GetTopicPriority(), Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void Consume_QueuedMessagesNoHeader_ExpectPriorityHeader()
         {
             stream.Assign(new List<TopicPartition>() { new TopicPartition("Test", 1) });
 
@@ -106,7 +127,24 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             foreach (var result in stream.Consume(TimeSpan.FromSeconds(1)))
             {
-                Assert.That(result.Message.Headers.GetTopicPriority(), Is.EqualTo(1));
+                Assert.That(result.Message.Headers.GetTopicPriority(), Is.Null);
+            }
+        }
+
+        [Test]
+        public void Consume_QueuedMessagesTopicDoesntExists_ExpectNoPriorityHeader()
+        {
+            stream.Assign(new List<TopicPartition>() { new TopicPartition("Test", 1) });
+
+            consumerMock.Setup(_ => _.Consume(It.IsAny<CancellationToken>()))
+                .Returns(new ConsumeResult<byte[], byte[]>
+                {
+                    TopicPartitionOffset = new TopicPartitionOffset("Test", 1, 2)
+                });
+
+            foreach (var result in stream.Consume(TimeSpan.FromSeconds(1)))
+            {
+                Assert.That(result.Message.Headers.GetTopicPriority(), Is.Null);
             }
         }
 

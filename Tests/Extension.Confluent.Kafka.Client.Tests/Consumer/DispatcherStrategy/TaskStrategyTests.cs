@@ -69,5 +69,21 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer.DispatcherStrategy
             Assert.That(strategy.CreateOrGet(result2, out channel), Is.False);
             Assert.That(channel.Id, Is.EqualTo(3));
         }
+
+        [Test]
+        public void Remove_ChannelExists_ExpectNewChannel()
+        {
+            var result1 = new ConsumeResult<byte[], byte[]>()
+            {
+                TopicPartitionOffset = new TopicPartitionOffset(new TopicPartition("Test", 1), new Offset(1))
+            };
+
+            Assert.That(strategy.CreateOrGet(result1, out var channel), Is.True);
+            Assert.That(strategy.CreateOrGet(result1, out channel), Is.False);
+
+            strategy.Remove(channel);
+
+            Assert.That(strategy.CreateOrGet(result1, out _), Is.True);
+        }
     }
 }

@@ -57,11 +57,10 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             if (adminClientBuilder == null) throw new ArgumentNullException(nameof(adminClientBuilder));
             if (createOffsetStoreFunc == null) throw new ArgumentNullException(nameof(createOffsetStoreFunc));
 
-            //Note: create interface 
             this.internalConsumer = consumerBuilder
                     .SetPartitionsAssignedHandler((_, list) => RegisterWrokerCtsOnAssign(list))
                     .SetPartitionsRevokedHandler((_, list) => CommittOffsetsOnRevoke(list))
-                .Build() ?? throw new ArgumentNullException(nameof(internalConsumer));
+                .Build() ?? throw new ArgumentNullException(nameof(consumerBuilder));
 
             this.adminClient = adminClientBuilder.Build() ?? throw new ArgumentNullException(nameof(adminClient));
             this.offsetStore = createOffsetStoreFunc?.Invoke(this.internalConsumer) ?? throw new ArgumentException($"invalid {nameof(createOffsetStoreFunc)} func");
@@ -78,9 +77,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             this.subscribedTopics = new HashSet<string>(configuration.TopicConfigs.Select(_ => _.TopicName));
             this.workerTaskCancellationTokenSourceByTopicPartition = new ConcurrentDictionary<TopicPartition, CancellationTokenSource>();
             this.messageLoopCancellationTokenSource = new CancellationTokenSource();
-
-            if (subscribedTopics.Count != this.configuration.TopicConfigs.Count())
-                throw new ArgumentException("Invalid configuration, duplicated topics detected. Please check provided configuration.");
         }
 
         private Task StartMessageLoopTask(CancellationTokenSource cancellationTokenSource)
@@ -171,17 +167,11 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                     {
                         break;
                     }
-                    catch (ConsumeException ex)
-                    {
-                        connectionHealthy = false;
-                        healthStatusCallback?.OnUnhealthyConnection(ex);
-                        logger.LogError(ex, "Kafka message consumption failed");
-                    }
                     catch (Exception ex)
                     {
                         connectionHealthy = false;
                         healthStatusCallback?.OnUnhealthyConnection(ex);
-                        logger.LogError(ex, "Kafka message consumption restarted");
+                        logger.LogError(ex, "Kafka message loop restarted");
                     }
                 }
 
@@ -193,8 +183,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
         private void CheckBrokerConnection()
         {
-            if (adminClient == null) throw new InvalidOperationException($"{nameof(adminClient)} not initialized");
-
             try
             {
                 //Note: in order to avoid ACL warning flooding on kafka broker side we take topic where user has described rights
@@ -267,8 +255,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
         private void RegisterWrokerCtsOnAssign(IEnumerable<TopicPartition> assignedPartitions)
         {
-            if (stream == null) throw new InvalidOperationException($"{nameof(stream)} not initialized");
-
             lock (lockObject)
             {
                 var topicPartitions = new HashSet<TopicPartition>(assignedPartitions);
@@ -305,8 +291,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
         private void CommittOffsetsOnRevoke(IEnumerable<TopicPartitionOffset> revokedPartitions)
         {
-            if (stream == null) throw new InvalidOperationException($"{nameof(stream)} not initialized");
-
             lock (lockObject)
             {
                 try
