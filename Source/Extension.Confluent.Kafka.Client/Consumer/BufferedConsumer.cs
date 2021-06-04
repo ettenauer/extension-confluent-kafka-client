@@ -71,6 +71,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             this.dispatcher = new ConsumeResultDispatcher<TKey, TValue>(
                 new ConsumeResultCallbackWrapper(callback, metricsCallback, offsetStore, logger),
                 dispatcherStrategy,
+                healthStatusCallback,
                 new ConsumeResultChannelWorkerConfig { CallbackResultCount = configuration.CallbackResultCount },
                 logger);
             this.stream = new ConsumeResultStream<TKey, TValue>(internalConsumer, configuration.TopicConfigs, logger);
@@ -116,9 +117,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
                         foreach (var result in stream.Consume(TimeSpan.FromSeconds(ConsumeTimeoutSeconds)))
                         {
-                            if (!subscribedTopics.Contains(result.Topic))
-                                continue;
-
                             try
                             {
                                 bool queued = false;
@@ -128,7 +126,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                                 }
                                 else
                                 {
-                                    logger.LogWarning($"Worker Cancellation Token for {result.TopicPartition} is missing");
+                                    logger.LogWarning($"Worker Cancellation Token for {result.TopicPartition} is missing.");
                                 }
 
                                 if (!queued)
@@ -188,6 +186,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 }
 
                 var reason = (cancellationToken.IsCancellationRequested ? ": cancellation was requested" : string.Empty);
+                healthStatusCallback?.OnMessageLoopCancelled(reason);
                 logger.LogInformation($"Finished kafka message consumption loop: {reason}");
             });
         }
@@ -230,40 +229,37 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             }
         }
 
-        public void Unsubcribe()
+        public void Unsubscribe()
         {
             lock (lockObject)
             {
-                if (!messageLoopCancellationTokenSource.IsCancellationRequested)
+                logger.LogInformation($"Starting to unsubscribe and stop processing for topics  {string.Join(",", subscribedTopics)}");
+
+                stream.Unsubscribe();
+
+                //Note: only cancelled, cts will be disposed and set again on subscribe
+                messageLoopCancellationTokenSource.Cancel();
+
+                //Note: to prevent reprocessing since offsets are committed in intervals
+                offsetStore.FlushCommit();
+                offsetStore.Clear();
+
+                foreach (var topicPartition in workerTaskCancellationTokenSourceByTopicPartition.Keys.ToArray())
                 {
-                    logger.LogInformation($"Starting to unsubscribe and stop processing for topics  {string.Join(",", subscribedTopics)}");
-
-                    stream.Unsubscribe();
-
-                    //Note: only cancelled, cts will be disposed and set again on subscribe
-                    messageLoopCancellationTokenSource.Cancel();
-
-                    //Note: to prevent reprocessing since offsets are committed in intervals
-                    offsetStore.FlushCommit();
-                    offsetStore.Clear();
-
-                    foreach (var topicPartition in workerTaskCancellationTokenSourceByTopicPartition.Keys.ToArray())
+                    if (workerTaskCancellationTokenSourceByTopicPartition.TryRemove(topicPartition, out var cts))
                     {
-                        if (workerTaskCancellationTokenSourceByTopicPartition.TryRemove(topicPartition, out var cts))
-                        {
-                            cts.Cancel();
-                            cts.Dispose();
-                        }
+                        cts.Cancel();
+                        cts.Dispose();
                     }
-
-                    logger.LogInformation($"Successfully unsubscribed & stopped processing for topics {string.Join(", ", subscribedTopics)}");
                 }
+
+                logger.LogInformation($"Successfully unsubscribed & stopped processing for topics {string.Join(", ", subscribedTopics)}");
             }
         }
 
         public void Dispose()
         {
-            Unsubcribe();
+            Unsubscribe();
             this.messageLoopCancellationTokenSource.Dispose();
             this.internalConsumer.Dispose();
             this.offsetStore.Dispose();

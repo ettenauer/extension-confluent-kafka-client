@@ -1,5 +1,6 @@
 ﻿using Confluent.Kafka;
 using Extension.Confluent.Kafka.Client.Consumer;
+using Extension.Confluent.Kafka.Client.Health;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -17,6 +18,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
         private Mock<IConsumeResultCallback<byte[], byte[]>> callbackMock;
         private ConsumeResultChannelWorkerConfig config;
         private Mock<ILogger> loggerMock;
+        private Mock<IHealthStatusCallback> healthStatusCallbackMock;
 
         [SetUp]
         public void SetUp()
@@ -27,9 +29,11 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
             config = new ConsumeResultChannelWorkerConfig { CallbackResultCount = 2 };
             channelMock = new Mock<IConsumeResultChannel<byte[], byte[]>>();
             loggerMock = new Mock<ILogger>();
+            healthStatusCallbackMock = new Mock<IHealthStatusCallback>();
             channelWorker = new ConsumeResultChannelWorker<byte[], byte[]>(
                 channelMock.Object,
                 callbackMock.Object,
+                healthStatusCallbackMock.Object,
                 config,
                 loggerMock.Object
                 );
@@ -38,13 +42,13 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
         [Test]
         public void Ctor_ArgumentValidation_ThrowException()
         {
-            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(null, callbackMock.Object, config, loggerMock.Object));
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(null, callbackMock.Object, healthStatusCallbackMock.Object, config, loggerMock.Object));
 
-            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, null, config, loggerMock.Object));
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, null, healthStatusCallbackMock.Object, config, loggerMock.Object));
 
-            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, null, loggerMock.Object));
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, healthStatusCallbackMock.Object, null, loggerMock.Object));
 
-            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, config, null));
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, healthStatusCallbackMock.Object, config, null));
         }
 
         [Test]

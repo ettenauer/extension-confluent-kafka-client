@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Extension.Confluent.Kafka.Client.Consumer
 {
     public interface IBufferedConsumer<TKey, TValue> : IDisposable
     {
         void Subscribe();
-        void Unsubcribe();
+        void Unsubscribe();
     }
 }

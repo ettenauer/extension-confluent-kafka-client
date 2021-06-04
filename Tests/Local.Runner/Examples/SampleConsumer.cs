@@ -43,7 +43,7 @@ namespace Local.Runner.Examples
             {
                 BufferSharding = BufferSharding.Task,
                 BufferMaxTaskCount = 5,
-                BufferSizePerChannel = 1000,
+                BufferSizePerChannel = 500,
                 TopicConfigs = new[]
                 {
                     new BufferedTopicConfig
@@ -91,12 +91,22 @@ namespace Local.Runner.Examples
 
         public Task OnReceivedAsync(ReadOnlyMemory<ConsumeResult<byte[], byte[]>> results, CancellationToken cancellationToken)
         {
-            return Task.Delay(100, cancellationToken);
+            return Task.Delay(10, cancellationToken);
         }
 
         public void Dispose()
         {
             consumer.Dispose();
+        }
+
+        public void OnMessageLoopCancelled(string reason)
+        {
+
+        }
+
+        public void OnWorkerTaskCancelled(long channelId, string reason)
+        {
+
         }
     }
 }

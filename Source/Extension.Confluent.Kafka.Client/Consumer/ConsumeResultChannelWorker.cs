@@ -1,4 +1,5 @@
 ﻿using Confluent.Kafka;
+using Extension.Confluent.Kafka.Client.Health;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Buffers;
@@ -12,11 +13,12 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         private readonly IConsumeResultChannel<TKey, TValue> channel;
         private readonly ConsumeResultChannelWorkerConfig configuration;
         private readonly IConsumeResultCallback<TKey, TValue> callback;
+        private readonly IHealthStatusCallback? healthStatusCallback;
         private readonly ILogger logger;
         
-
         public ConsumeResultChannelWorker(IConsumeResultChannel<TKey, TValue> channel, 
             IConsumeResultCallback<TKey, TValue> callback,
+            IHealthStatusCallback? healthStatusCallback,
             ConsumeResultChannelWorkerConfig configuration,
             ILogger logger)
         {
@@ -24,6 +26,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             this.callback = callback ?? throw new ArgumentNullException(nameof(callback));
             this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.healthStatusCallback = healthStatusCallback;
         }
 
         public Task CreateRunTask(CancellationToken cancellationToken)
@@ -72,7 +75,9 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                     memoryOwner.Dispose();
                 }
 
-                logger.LogInformation($"work {channel.Id} terminated");
+                var reason = (cancellationToken.IsCancellationRequested ? ": cancellation was requested" : string.Empty);
+                healthStatusCallback?.OnWorkerTaskCancelled(channel.Id, reason);
+                logger.LogInformation($"Worker task {channel.Id} terminated : {reason}");
             });
         }
     }

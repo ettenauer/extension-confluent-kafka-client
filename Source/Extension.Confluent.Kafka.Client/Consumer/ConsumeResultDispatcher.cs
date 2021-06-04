@@ -1,6 +1,7 @@
 ﻿using Confluent.Kafka;
 using Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy;
 using Extension.Confluent.Kafka.Client.Extensions;
+using Extension.Confluent.Kafka.Client.Health;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -17,11 +18,13 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         private readonly IConsumeResultCallback<TKey, TValue> callback;
         private readonly ConsumeResultChannelWorkerConfig configuration;
         private readonly IDispatcherStrategy<TKey, TValue> dispatcherStrategy;
+        private readonly IHealthStatusCallback? healthStatusCallback;
         private readonly ConcurrentDictionary<long, Task> workers;
         private readonly ILogger logger;
 
         public ConsumeResultDispatcher(IConsumeResultCallback<TKey, TValue> callback, 
             IDispatcherStrategy<TKey, TValue> dispatcherStrategy, 
+            IHealthStatusCallback? healthStatusCallback,
             ConsumeResultChannelWorkerConfig configuration,
             ILogger logger)
         {
@@ -30,6 +33,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             this.dispatcherStrategy = dispatcherStrategy ?? throw new ArgumentNullException(nameof(dispatcherStrategy));
             this.workers = new ConcurrentDictionary<long, Task>();
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.healthStatusCallback = healthStatusCallback;
         }
 
         public async Task<bool> TryEnqueueAsync(ConsumeResult<TKey, TValue> result, CancellationToken cancellationToken)
@@ -85,7 +89,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
         private Task CreateWorkerTask(IConsumeResultChannel<TKey, TValue> channel, CancellationToken cancellationToken)
         {
-            var worker = new ConsumeResultChannelWorker<TKey, TValue>(channel, callback, configuration, logger);
+            var worker = new ConsumeResultChannelWorker<TKey, TValue>(channel, callback, healthStatusCallback, configuration, logger);
             return worker.CreateRunTask(cancellationToken);
         }
     }
