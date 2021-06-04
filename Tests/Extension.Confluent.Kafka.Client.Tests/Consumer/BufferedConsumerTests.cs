@@ -82,6 +82,12 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 loggerMock.Object);
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            consumer.Dispose();
+        }
+
         [Test]
         public void Ctor_ArgumentValidation_ThrowException()
         {
@@ -180,7 +186,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
         }
 
         [Test]
-        public async Task AssignedHandler_SubscribedTopics_CheckMessageLoop()
+        public async Task Subscribe_SubscribedTopics_CheckMessageLoop()
         {
             IConsumeResultChannel<byte[], byte[]> channel = new ConsumeResultChannel<byte[], byte[]>(1, 2, 1);
             internalConsumerMock.Setup(c => c.Consume(It.IsAny<TimeSpan>()))
@@ -206,7 +212,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
         }
 
         [Test]
-        public async Task AssignedHandler_UnsubscribedTopics_CheckMessageLoop()
+        public async Task Subscribe_UnsubscribedTopics_CheckMessageLoop()
         {
             IConsumeResultChannel<byte[], byte[]> channel = new ConsumeResultChannel<byte[], byte[]>(1, 2, 1);
 

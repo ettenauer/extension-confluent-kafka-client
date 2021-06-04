@@ -7,6 +7,7 @@ using Extension.Confluent.Kafka.Client.Metrics;
 using Extension.Confluent.Kafka.Client.OffsetStore;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -33,8 +34,13 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         private readonly ConsumeResultStream<TKey, TValue> stream;
 
         private readonly BufferedConsumerConfig configuration;
-        //Note: token source is used to control message loop and worker tasks is controlled by Assign or Unsubscribe
-        private CancellationTokenSource? cts;
+
+        //Note: token source is used to control message loop
+        private CancellationTokenSource messageLoopCancellationTokenSource;
+
+        //Note: token sources to control worker cancellation in case of rebalance
+        private ConcurrentDictionary<TopicPartition, CancellationTokenSource> workerTaskCancellationTokenSourceByTopicPartition;
+
         private bool connectionHealthy = false;
 
         public BufferedConsumer(IConsumerBuilderWrapper<TKey, TValue> consumerBuilder,
@@ -53,7 +59,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
             //Note: create interface 
             this.internalConsumer = consumerBuilder
-                    .SetPartitionsAssignedHandler((_, list) => StartMessageLoopOnAssign(list))
+                    .SetPartitionsAssignedHandler((_, list) => RegisterWrokerCtsOnAssign(list))
                     .SetPartitionsRevokedHandler((_, list) => CommittOffsetsOnRevoke(list))
                 .Build() ?? throw new ArgumentNullException(nameof(internalConsumer));
 
@@ -69,20 +75,20 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 logger);
             this.stream = new ConsumeResultStream<TKey, TValue>(internalConsumer, configuration.TopicConfigs, logger);
             this.subscribedTopics = new HashSet<string>(configuration.TopicConfigs.Select(_ => _.TopicName));
+            this.workerTaskCancellationTokenSourceByTopicPartition = new ConcurrentDictionary<TopicPartition, CancellationTokenSource>();
+            this.messageLoopCancellationTokenSource = new CancellationTokenSource();
 
             if (subscribedTopics.Count != this.configuration.TopicConfigs.Count())
                 throw new ArgumentException("Invalid configuration, duplicated topics detected. Please check provided configuration.");
         }
 
-        private Task StartMessageLoopTask()
+        private Task StartMessageLoopTask(CancellationTokenSource cancellationTokenSource)
         {
             logger.LogInformation("Starting kafka message consumption loop");
 
-            if (cts == null) throw new InvalidOperationException("CancellationTokenSource is missing");
-
             return Task.Run(async () =>
             {
-                var cancellationToken = cts.Token;
+                var cancellationToken = cancellationTokenSource.Token;
                 var flushCommit = DateTime.MinValue;
                 var lastLoopHeartbeat = DateTime.MinValue;
                 //Note: DateTime-Type is used to define some cooldown period in case of partitions are paused
@@ -115,7 +121,16 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
                             try
                             {
-                                var queued = await dispatcher.TryEnqueueAsync(result, cancellationToken);
+                                bool queued = false;
+                                if (workerTaskCancellationTokenSourceByTopicPartition.TryGetValue(result.TopicPartition, out var workerCts))
+                                {
+                                    queued = await dispatcher.TryEnqueueAsync(result, workerCts.Token);
+                                }
+                                else
+                                {
+                                    logger.LogWarning($"Worker Cancellation Token for {result.TopicPartition} is missing");
+                                }
+
                                 if (!queued)
                                 {
                                     paused = DateTime.UtcNow + TimeSpan.FromMilliseconds(configuration.BackpressurePartitionPauseInMilliseconds);
@@ -125,7 +140,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                                         pausedOffsets.Add(pausedOffset);
                                     }
 
-                                    logger.LogWarning($"Enqueue message for processing failed due to processing timeout, partition {result.TopicPartition} is paused.");
+                                    logger.LogWarning($"Enqueue message for processing failed due to processing timeout or missing cts, partition {result.TopicPartition} is paused.");
                                 }
                             }
                             catch (Exception ex)
@@ -206,6 +221,12 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 logger.LogInformation($"Subcribe for topics {string.Join(",", subscribedTopics)} via buffering");
 
                 stream.Subscribe();
+
+                messageLoopCancellationTokenSource.Cancel();
+                messageLoopCancellationTokenSource.Dispose();
+                messageLoopCancellationTokenSource = new CancellationTokenSource();
+
+                _ = StartMessageLoopTask(messageLoopCancellationTokenSource);
             }
         }
 
@@ -213,48 +234,76 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         {
             lock (lockObject)
             {
-                logger.LogInformation($"Starting to unsubscribe and stop processing for topics  {string.Join(",", subscribedTopics)}");
+                if (!messageLoopCancellationTokenSource.IsCancellationRequested)
+                {
+                    logger.LogInformation($"Starting to unsubscribe and stop processing for topics  {string.Join(",", subscribedTopics)}");
 
-                stream.Unsubscribe();
+                    stream.Unsubscribe();
 
-                cts?.Cancel();
-                cts?.Dispose();
-                cts = null;
+                    //Note: only cancelled, cts will be disposed and set again on subscribe
+                    messageLoopCancellationTokenSource.Cancel();
 
-                //Note: to prevent reprocessing since offsets are committed in intervals
-                offsetStore.FlushCommit();
-                offsetStore.Clear();
+                    //Note: to prevent reprocessing since offsets are committed in intervals
+                    offsetStore.FlushCommit();
+                    offsetStore.Clear();
 
-                logger.LogInformation($"Successfully unsubscribed & stopped processing for topics {string.Join(", ", subscribedTopics)}");
+                    foreach (var topicPartition in workerTaskCancellationTokenSourceByTopicPartition.Keys.ToArray())
+                    {
+                        if (workerTaskCancellationTokenSourceByTopicPartition.TryRemove(topicPartition, out var cts))
+                        {
+                            cts.Cancel();
+                            cts.Dispose();
+                        }
+                    }
+
+                    logger.LogInformation($"Successfully unsubscribed & stopped processing for topics {string.Join(", ", subscribedTopics)}");
+                }
             }
         }
 
         public void Dispose()
         {
             Unsubcribe();
+            this.messageLoopCancellationTokenSource.Dispose();
             this.internalConsumer.Dispose();
             this.offsetStore.Dispose();
         }
 
-        private void StartMessageLoopOnAssign(IEnumerable<TopicPartition> assignedPartitions)
+        private void RegisterWrokerCtsOnAssign(IEnumerable<TopicPartition> assignedPartitions)
         {
             if (stream == null) throw new InvalidOperationException($"{nameof(stream)} not initialized");
 
             lock (lockObject)
             {
-                var assignedTopicsMessage = string.Join(",", assignedPartitions.Select(_ => _.ToString()));
+                var topicPartitions = new HashSet<TopicPartition>(assignedPartitions);
+
+                var assignedTopicsMessage = string.Join(",", topicPartitions.Select(_ => _.ToString()));
 
                 logger.LogInformation($"assign partitions [{assignedTopicsMessage}]");
-                stream.Assign(assignedPartitions);
 
-                //note: in order cleanup existing worker channel tasks we cancel existing processing
-                cts?.Cancel();
-                cts?.Dispose();
-                cts = new CancellationTokenSource();
+                //Note: add not existing cts for worker
+                foreach (var topicPartition in topicPartitions)
+                {
+                    if (!workerTaskCancellationTokenSourceByTopicPartition.ContainsKey(topicPartition))
+                    {
+                        workerTaskCancellationTokenSourceByTopicPartition[topicPartition] = CancellationTokenSource.CreateLinkedTokenSource(messageLoopCancellationTokenSource.Token);
+                    }
+                }
 
-                logger.LogInformation("start message loop started by new paritions {assignedTopicsMessage} ");
+                //Note: cancel cts for not used topic partitions
+                foreach (var topicPartition in workerTaskCancellationTokenSourceByTopicPartition.Keys.ToArray())
+                {
+                    if (!topicPartitions.Contains(topicPartition))
+                    {
+                        if (workerTaskCancellationTokenSourceByTopicPartition.TryRemove(topicPartition, out var cts))
+                        {
+                            cts.Cancel();
+                            cts.Dispose();
+                        }
+                    }
+                }
 
-                _ = StartMessageLoopTask();
+                stream.Assign(topicPartitions);
             }
         }
 

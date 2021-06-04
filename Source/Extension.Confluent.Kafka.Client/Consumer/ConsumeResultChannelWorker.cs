@@ -30,20 +30,11 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         {
             return new Task(async () =>
             {
-                //Note: workerCts is used to prevent queueing tasks in case of empty TopicPartitions
-                var workerCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 var memoryOwner = MemoryPool<ConsumeResult<TKey, TValue>>.Shared.Rent(configuration.CallbackResultCount);
                 try
                 {
-                    while (!workerCts.IsCancellationRequested && await channel.WaitToReadAsync(workerCts.Token).ConfigureAwait(false))
+                    while (!cancellationToken.IsCancellationRequested && await channel.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        workerCts.Cancel();
-                        workerCts.Dispose();
-
-                        logger.LogDebug("Worker token was cancelled.");
-
-                        workerCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
                         //IMPORTANT:
                         // there is a memory leak in case low priority topic never receive a message due to not cleanup AsyncOperation reference in BoundedChannel
                         // https://github.com/dotnet/runtime/issues/761
@@ -78,8 +69,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 }
                 finally
                 {
-                    workerCts?.Cancel();
-                    workerCts?.Dispose();
                     memoryOwner.Dispose();
                 }
 

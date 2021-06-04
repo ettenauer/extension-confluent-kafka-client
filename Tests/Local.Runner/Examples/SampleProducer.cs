@@ -18,6 +18,7 @@ namespace Local.Runner.Examples
 
         public SampleProducer(int messageCount, ILogger logger)
         {
+            this.logger = logger;
             this.messageCount = messageCount;
             this.producer = new ProducerBuilder<byte[], byte[]>(new ProducerConfig { BootstrapServers = "localhost:9092" })
                 .Build();
@@ -29,7 +30,7 @@ namespace Local.Runner.Examples
 
             for (int i = 0; i < messageCount; ++i)
             {
-                producer.Produce("my-topic", new Message<byte[], byte[]> { Key = BitConverter.GetBytes(i), Value = BitConverter.GetBytes(i) });
+                producer.Produce(Topic, new Message<byte[], byte[]> { Key = BitConverter.GetBytes(i), Value = BitConverter.GetBytes(i) });
             }   
         }
 

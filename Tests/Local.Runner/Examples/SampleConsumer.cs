@@ -84,7 +84,7 @@ namespace Local.Runner.Examples
 
         public void Record(int messageCount, TimeSpan callbackDuration)
         {
-            logger.LogInformation("Received {0} messages");
+            logger.LogInformation("Received {0} messages", messageCount);
         }
 
         public Task OnReceivedAsync(ReadOnlyMemory<ConsumeResult<byte[], byte[]>> results, CancellationToken cancellationToken)

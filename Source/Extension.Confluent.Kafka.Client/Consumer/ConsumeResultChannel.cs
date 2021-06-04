@@ -48,7 +48,23 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
         public async Task<bool> WaitToReadAsync(CancellationToken cancellationToken)
         {
-            return await await Task.WhenAny(channels.Select(_ => _.Reader.WaitToReadAsync(cancellationToken).AsTask()));
+            //Note: workerCts is used to prevent queueing tasks mutiple concurrent tasks due mutiple internal channels
+            var workerCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            bool available = false;
+
+            try
+            {
+                available = await await Task.WhenAny(channels.Select(_ => _.Reader.WaitToReadAsync(cancellationToken).AsTask()));
+            }
+            finally
+            {
+                //Note: cancellation is required to stop wait all waiting tasks
+                workerCts.Cancel();
+                workerCts.Dispose();
+            }
+
+            return available;
         }
 
         public bool TryRead(out ConsumeResult<TKey, TValue>? item)
