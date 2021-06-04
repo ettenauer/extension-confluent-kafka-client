@@ -438,9 +438,6 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
             healthStatusCallbackMock.Verify(_ => _.OnUnhealthyConnection(It.IsAny<Exception>()), Times.AtLeast(2));
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.Once);
 
-            //Note: callback is triggered
-            callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce());
-
             consumer.Unsubscribe();
         }
     }
