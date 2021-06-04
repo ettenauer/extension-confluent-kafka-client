@@ -26,7 +26,7 @@ namespace Local.Runner
 
                 consumer.Subscribe();
 
-                using(var producer = new SampleProducer(1000, serviceProvider
+                using(var producer = new SampleProducer(10000, serviceProvider
                 .GetService<ILoggerFactory>()
                 .CreateLogger<SampleProducer>()))
                 {

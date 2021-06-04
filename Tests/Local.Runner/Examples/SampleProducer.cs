@@ -20,7 +20,7 @@ namespace Local.Runner.Examples
         {
             this.logger = logger;
             this.messageCount = messageCount;
-            this.producer = new ProducerBuilder<byte[], byte[]>(new ProducerConfig { BootstrapServers = "localhost:9092" })
+            this.producer = new ProducerBuilder<byte[], byte[]>(new ProducerConfig { BootstrapServers = "localhost:29092" })
                 .Build();
         }
 

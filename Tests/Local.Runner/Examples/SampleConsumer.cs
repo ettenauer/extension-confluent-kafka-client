@@ -32,9 +32,10 @@ namespace Local.Runner.Examples
             {
                 GroupId = "test-group",
                 ClientId = Environment.MachineName,
-                BootstrapServers = "localhost:9092",
+                BootstrapServers = "localhost:29092",
                 AutoOffsetReset = AutoOffsetReset.Earliest,
-                EnableAutoCommit = false
+                EnableAutoCommit = false,
+                FetchWaitMaxMs = 50
             };
 
             //Note: actual configuration for buffered consumer
@@ -42,6 +43,7 @@ namespace Local.Runner.Examples
             {
                 BufferSharding = BufferSharding.Task,
                 BufferMaxTaskCount = 5,
+                BufferSizePerChannel = 1000,
                 TopicConfigs = new[]
                 {
                     new BufferedTopicConfig
