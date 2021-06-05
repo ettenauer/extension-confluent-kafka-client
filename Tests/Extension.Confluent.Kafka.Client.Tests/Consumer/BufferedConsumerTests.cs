@@ -225,7 +225,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(3));
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
 
@@ -488,7 +488,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            await Task.Delay(TimeSpan.FromSeconds(3));
 
             //Note: health check is triggered
             healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.Once);
