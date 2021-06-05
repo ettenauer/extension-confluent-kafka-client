@@ -88,43 +88,13 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 (c) => offsetStoreMock.Object,
                 dispatcherStrategyMock.Object,
                 null,
-                healthStatusCallbackMock.Object,
+                null,
                 null,
                 config,
                 loggerMock.Object));
 
             Assert.Throws<ArgumentNullException>(() => new BufferedConsumer<byte[], byte[]>(consumerBuilderMock.Object,
                 null,
-                (c) => offsetStoreMock.Object,
-                dispatcherStrategyMock.Object,
-                null,
-                healthStatusCallbackMock.Object,
-                null,
-                config,
-                loggerMock.Object));
-
-            Assert.Throws<ArgumentNullException>(() => new BufferedConsumer<byte[], byte[]>(consumerBuilderMock.Object,
-                adminClientBuilderMock.Object,
-                null,
-                dispatcherStrategyMock.Object,
-                null,
-                healthStatusCallbackMock.Object,
-                null,
-                config,
-                loggerMock.Object));
-
-            Assert.Throws<ArgumentNullException>(() => new BufferedConsumer<byte[], byte[]>(consumerBuilderMock.Object,
-                adminClientBuilderMock.Object,
-                (c) => offsetStoreMock.Object,
-                null,
-                null,
-                healthStatusCallbackMock.Object,
-                null,
-                config,
-                loggerMock.Object));
-
-            Assert.Throws<ArgumentNullException>(() => new BufferedConsumer<byte[], byte[]>(consumerBuilderMock.Object,
-                adminClientBuilderMock.Object,
                 (c) => offsetStoreMock.Object,
                 dispatcherStrategyMock.Object,
                 null,
@@ -135,10 +105,31 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             Assert.Throws<ArgumentNullException>(() => new BufferedConsumer<byte[], byte[]>(consumerBuilderMock.Object,
                 adminClientBuilderMock.Object,
+                null,
+                dispatcherStrategyMock.Object,
+                null,
+                null,
+                null,
+                config,
+                loggerMock.Object));
+
+            Assert.Throws<ArgumentNullException>(() => new BufferedConsumer<byte[], byte[]>(consumerBuilderMock.Object,
+                adminClientBuilderMock.Object,
+                (c) => offsetStoreMock.Object,
+                null,
+                null,
+                null,
+                null,
+                config,
+                loggerMock.Object));
+
+
+            Assert.Throws<ArgumentNullException>(() => new BufferedConsumer<byte[], byte[]>(consumerBuilderMock.Object,
+                adminClientBuilderMock.Object,
                 (c) => offsetStoreMock.Object,
                 dispatcherStrategyMock.Object,
                 null,
-                healthStatusCallbackMock.Object,
+                null,
                 null,
                 null,
                 loggerMock.Object));
@@ -149,7 +140,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 (c) => offsetStoreMock.Object,
                 dispatcherStrategyMock.Object,
                 null,
-                healthStatusCallbackMock.Object,
+                null,
                 null,
                 config,
                 null));
@@ -200,10 +191,47 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             //Note: callback is triggered
             callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce());
-           
+            metricsCallbackMock.Verify(_ => _.RecordSuccess(It.IsAny<int>(), It.IsAny<TimeSpan>()), Times.AtLeastOnce);
+
             //Note: verify if offse store is properly used
-            offsetStoreMock.Verify(_ => _.Store(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()));
-            offsetStoreMock.Verify(_ => _.Complete(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()));
+            offsetStoreMock.Verify(_ => _.Store(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()), Times.AtLeastOnce);
+            offsetStoreMock.Verify(_ => _.Complete(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()), Times.AtLeastOnce);
+            offsetStoreMock.Verify(_ => _.FlushCommit(), Times.Once);
+
+            consumer.Unsubscribe();
+        }
+
+        [Test]
+        public async Task Subscribe_OptionalCallbackNotSet_CheckConsumedMessages()
+        {
+            consumer = new BufferedConsumer<byte[], byte[]>(
+                    consumerBuilderMock.Object,
+                    adminClientBuilderMock.Object,
+                    (c) => offsetStoreMock.Object,
+                    dispatcherStrategyMock.Object,
+                    null, // callback not set
+                    null, // callback not set
+                    null, // callback not set
+                    config,
+                    loggerMock.Object);
+
+            IConsumeResultChannel<byte[], byte[]> channel = new ConsumeResultChannel<byte[], byte[]>(1, 2, 1);
+            internalConsumerMock.Setup(c => c.Consume(It.IsAny<TimeSpan>()))
+                .Returns(new ConsumeResult<byte[], byte[]> { TopicPartitionOffset = new TopicPartitionOffset("Test1", 1, 1) });
+            dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
+                .Returns(true);
+
+            consumer.Subscribe();
+
+            assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
+
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
+
+            //Note: verify if offse store is properly used
+            offsetStoreMock.Verify(_ => _.Store(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()), Times.AtLeastOnce);
+            offsetStoreMock.Verify(_ => _.Complete(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()), Times.AtLeastOnce);
             offsetStoreMock.Verify(_ => _.FlushCommit(), Times.Once);
 
             consumer.Unsubscribe();
@@ -390,7 +418,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
         }
 
         [Test]
-        public async Task MessageLoop_Failure_ExpectOnUnhealthyConnection()
+        public async Task MessageLoop_ConsumeFailure_ExpectOnUnhealthyConnection()
         {
             IConsumeResultChannel<byte[], byte[]> channel = new ConsumeResultChannel<byte[], byte[]>(1, 2, 1);
             internalConsumerMock.Setup(c => c.Consume(It.IsAny<TimeSpan>()))
@@ -438,6 +466,41 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
             healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.Never);
             healthStatusCallbackMock.Verify(_ => _.OnUnhealthyConnection(It.IsAny<Exception>()), Times.AtLeast(2));
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.Once);
+
+            consumer.Unsubscribe();
+        }
+
+        [Test]
+        public async Task MessageLoop_CallbackError_RecordFailureAndOffsetCompelete()
+        {
+            IConsumeResultChannel<byte[], byte[]> channel = new ConsumeResultChannel<byte[], byte[]>(1, 2, 1);
+            internalConsumerMock.Setup(c => c.Consume(It.IsAny<TimeSpan>()))
+                .Returns(new ConsumeResult<byte[], byte[]> { TopicPartitionOffset = new TopicPartitionOffset("Test1", 1, 1) });
+            dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
+                .Returns(true);
+
+            callbackMock.Setup(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()))
+                .Throws(new Exception("Test Error"));
+
+            consumer.Subscribe();
+
+            internalConsumerMock.Verify(c => c.Consume(It.IsAny<CancellationToken>()), Times.Never);
+
+            assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
+
+            await Task.Delay(TimeSpan.FromSeconds(1));
+
+            //Note: health check is triggered
+            healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.Once);
+            healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.Once);
+
+            //Note: callback is triggered
+            metricsCallbackMock.Verify(_ => _.RecordFailure(It.IsAny<int>(), It.IsAny<TimeSpan>()), Times.AtLeastOnce());
+
+            //Note: verify if offse store is properly used
+            offsetStoreMock.Verify(_ => _.Store(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()), Times.AtLeastOnce);
+            offsetStoreMock.Verify(_ => _.Complete(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>()), Times.AtLeastOnce);
+            offsetStoreMock.Verify(_ => _.FlushCommit(), Times.Once);
 
             consumer.Unsubscribe();
         }

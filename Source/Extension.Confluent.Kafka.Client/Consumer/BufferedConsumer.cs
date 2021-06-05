@@ -65,7 +65,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             this.adminClient = adminClientBuilder.Build() ?? throw new ArgumentNullException(nameof(adminClient));
             this.offsetStore = createOffsetStoreFunc?.Invoke(this.internalConsumer) ?? throw new ArgumentException($"invalid {nameof(createOffsetStoreFunc)} func");
             this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            this.healthStatusCallback = healthStatusCallback ?? throw new ArgumentNullException(nameof(healthStatusCallback));
+            this.healthStatusCallback = healthStatusCallback;
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.dispatcher = new ConsumeResultDispatcher<TKey, TValue>(
                 new ConsumeResultCallbackWrapper(callback, metricsCallback, offsetStore, logger),
@@ -341,10 +341,12 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 catch (Exception ex)
                 {
                     logger.LogError(ex, $"Message processing failed. But message will committed.");
+
+                    metricsCallback?.RecordFailure(results.Length, stopwatch.Elapsed);
                 }
                 finally
                 {
-                    metricsCallback?.Record(results.Length, stopwatch.Elapsed);
+                    metricsCallback?.RecordSuccess(results.Length, stopwatch.Elapsed);
                 }
 
                 //Note: processed message is marked as complete so the offset can be flushed and committed

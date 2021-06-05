@@ -218,7 +218,8 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
         [TestCase(BufferSharding.Parition)]
         [TestCase(BufferSharding.Task)]
         [TestCase(BufferSharding.Single)]
-        public void Build_ConfiguredSharding_ExpectedOffsetStore(BufferSharding sharding)
+        [TestCase(100)]
+        public void Build_ConfiguredSharding_ExpectedOffsetStoreOrException(BufferSharding sharding)
         {
             config = new BufferedConsumerConfig
             {
@@ -244,20 +245,20 @@ namespace Extension.Confluent.Kafka.Client.Tests.Builder
                 .SetHealthStatusCallback(healthStatusCallbackMock.Object)
                 .SetPartitionsAssignedHandler((_, _) => { return; })
                 .SetPartitionsRevokedHandler((_, _) => { return; });
-
-            builder.Build();
-
+       
             switch (config.BufferSharding)
             {
                 case BufferSharding.Parition:
                 case BufferSharding.Single:
+                    builder.Build();
                     Assert.That(builder.OffsetStore, Is.AssignableTo(typeof(DictionaryOffsetStore<byte[],byte[]>)));
                     break;
                 case BufferSharding.Task:
+                    builder.Build();
                     Assert.That(builder.OffsetStore, Is.AssignableTo(typeof(HeapOffsetStore<byte[], byte[]>)));
                     break;
                 default:
-                    Assert.Fail("missing offset store");
+                    Assert.Throws<ArgumentException>(() => builder.Build());
                     break;
             }
         }

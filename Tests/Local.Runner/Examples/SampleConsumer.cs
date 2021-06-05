@@ -84,11 +84,6 @@ namespace Local.Runner.Examples
             logger.LogInformation("Connection healthy");
         }
 
-        public void Record(int messageCount, TimeSpan callbackDuration)
-        {
-            logger.LogInformation("Received {0} messages", messageCount);
-        }
-
         public Task OnReceivedAsync(ReadOnlyMemory<ConsumeResult<byte[], byte[]>> results, CancellationToken cancellationToken)
         {
             return Task.Delay(10, cancellationToken);
@@ -105,6 +100,16 @@ namespace Local.Runner.Examples
         }
 
         public void OnWorkerTaskCancelled(long channelId, string reason)
+        {
+
+        }
+
+        public void RecordSuccess(int messageCount, TimeSpan callbackDuration)
+        {
+
+        }
+
+        public void RecordFailure(int messageCount, TimeSpan callbackDuration)
         {
 
         }

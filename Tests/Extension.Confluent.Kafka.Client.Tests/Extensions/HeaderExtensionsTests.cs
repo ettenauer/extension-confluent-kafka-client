@@ -1,6 +1,7 @@
 ﻿using Confluent.Kafka;
 using Extension.Confluent.Kafka.Client.Extensions;
 using NUnit.Framework;
+using System;
 
 namespace Extension.Confluent.Kafka.Client.Tests.Extensions
 {
@@ -38,8 +39,20 @@ namespace Extension.Confluent.Kafka.Client.Tests.Extensions
         }
 
         [Test]
+        public void GetWorkerChannelId_InvalidValue_ReturnNull()
+        {
+            //Note: invalid expect long
+            headers.Add(HeaderFields.WorkerChannelId, BitConverter.GetBytes((short)1));
+
+            Assert.That(headers.GetWorkerChannelId(), Is.Null);
+        }
+
+        [Test]
         public void GetTopicPriority_EmptyHeaders_ReturnNull()
-        {   
+        {
+            //Note: invalid expect byte
+            headers.Add(HeaderFields.TopicPriority, BitConverter.GetBytes((long)1));
+
             Assert.That(headers.GetTopicPriority(), Is.Null);
         }
     }

@@ -91,7 +91,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer.Builder
             if (adminClientBuilder == null) throw new ArgumentException($"{nameof(SetAdminBuilder)} must be called");
             if (logger == null) throw new ArgumentException($"{nameof(SetLogger)} must be called");
 
-            return CreateConsumer(new ConsumerBuilderWrapper(consumerBuilder, partitionsAssingedHandler, partitionsRevokedHandler),
+            return CreateConsumer(new ConsumerBuilderWrapper<TKey, TValue>(consumerBuilder, partitionsAssingedHandler, partitionsRevokedHandler),
                 new AdminClientBuilderWrapper(adminClientBuilder),
                 (c) => CreateOffsetStore(c, configuration),
                 CreateDispatcher(configuration),
@@ -152,64 +152,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer.Builder
                     return new SingleStrategy<TKey, TValue>(config.BufferSizePerChannel, priorityChannelCount);
                 default:
                     throw new ArgumentException($"BufferSharding {config?.BufferSharding} not supported");
-            }
-        }
-
-        private class ConsumerBuilderWrapper : IConsumerBuilderWrapper<TKey, TValue>
-        {
-            private readonly ConsumerBuilder<TKey, TValue> consumerBuilder;
-            private readonly Action<IConsumer<TKey, TValue>, List<TopicPartition>>? sourcePartitionsAssignedHandler;
-            private readonly Action<IConsumer<TKey, TValue>, List<TopicPartitionOffset>>? sourcePartitionsRevokedHandler;
-
-            public ConsumerBuilderWrapper(ConsumerBuilder<TKey, TValue> consumerBuilder,
-                Action<IConsumer<TKey, TValue>, List<TopicPartition>>? sourcePartitionsAssignedHandler,
-                Action<IConsumer<TKey, TValue>, List<TopicPartitionOffset>>? sourcePartitionsRevokedHandler)
-            {
-                this.consumerBuilder = consumerBuilder ?? throw new ArgumentNullException(nameof(consumerBuilder));
-                this.sourcePartitionsAssignedHandler = sourcePartitionsAssignedHandler;
-                this.sourcePartitionsRevokedHandler = sourcePartitionsRevokedHandler;
-            }
-
-            public IConsumer<TKey, TValue> Build()
-            {
-                return this.consumerBuilder.Build();
-            }
-
-            public IConsumerBuilderWrapper<TKey, TValue> SetPartitionsAssignedHandler(Action<IConsumer<TKey, TValue>, List<TopicPartition>> partitionsAssingedHandler)
-            {
-                this.consumerBuilder.SetPartitionsAssignedHandler((c, list) =>
-                {
-                    partitionsAssingedHandler.Invoke(c, list);
-                    sourcePartitionsAssignedHandler?.Invoke(c, list);
-                });
-
-                return this;
-            }
-
-            public IConsumerBuilderWrapper<TKey, TValue> SetPartitionsRevokedHandler(Action<IConsumer<TKey, TValue>, List<TopicPartitionOffset>> partitionsRevokedHandler)
-            {
-                this.consumerBuilder.SetPartitionsRevokedHandler((c, list) =>
-                {
-                    partitionsRevokedHandler.Invoke(c, list);
-                    sourcePartitionsRevokedHandler?.Invoke(c, list);
-                });
-
-                return this;
-            }
-        }
-
-        private class AdminClientBuilderWrapper : IAdminClientBuilderWrapper
-        {
-            private readonly AdminClientBuilder adminClientBuilder;
-
-            public AdminClientBuilderWrapper(AdminClientBuilder adminClientBuilder)
-            {
-                this.adminClientBuilder = adminClientBuilder ?? throw new ArgumentNullException(nameof(adminClientBuilder));
-            }
-
-            public IAdminClient Build()
-            {
-                return this.adminClientBuilder.Build();
             }
         }
     }

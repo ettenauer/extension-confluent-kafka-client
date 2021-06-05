@@ -4,6 +4,8 @@ namespace Extension.Confluent.Kafka.Client.Metrics
 {
     public interface IMetricsCallback
     {
-        void Record(int messageCount, TimeSpan callbackDuration);
+        void RecordSuccess(int messageCount, TimeSpan callbackDuration);
+
+        void RecordFailure(int messageCount, TimeSpan callbackDuration);
     }
 }
