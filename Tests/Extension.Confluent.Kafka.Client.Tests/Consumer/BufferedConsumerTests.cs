@@ -252,6 +252,8 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
             consumer.Subscribe();
 
             await Task.Delay(TimeSpan.FromSeconds(2));
@@ -261,7 +263,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             consumer.Unsubscribe();
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
             //Note: verify cancellation
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Exactly(2));
@@ -409,7 +411,6 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
             adminClientMock.Verify(_ => _.GetMetadata(It.IsAny<string>(), It.IsAny<TimeSpan>()), Times.AtLeast(2));
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopPing(), Times.Never);
             healthStatusCallbackMock.Verify(_ => _.OnUnhealthyConnection(It.IsAny<Exception>()), Times.AtLeast(2));
-            callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.Never());
 
             consumer.Unsubscribe();
         }
