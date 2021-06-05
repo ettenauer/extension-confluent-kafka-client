@@ -1,4 +1,6 @@
-﻿using Confluent.Kafka;
+﻿using App.Metrics;
+using App.Metrics.Scheduling;
+using Confluent.Kafka;
 using Extension.Confluent.Kafka.Client.Configuration;
 using Extension.Confluent.Kafka.Client.Consumer;
 using Extension.Confluent.Kafka.Client.Consumer.Builder;
@@ -22,6 +24,8 @@ namespace Local.Runner.Examples
 
         private readonly ILogger logger;
         private readonly IBufferedConsumer<byte[], byte[]> consumer;
+        private readonly IMetricsRoot metrics;
+        private readonly AppMetricsTaskScheduler appMetricsTaskScheduler;
 
         public SampleConsumer(ILogger logger)
         {
@@ -30,7 +34,7 @@ namespace Local.Runner.Examples
             //Note: confluent configuration see https://github.com/confluentinc/confluent-kafka-dotnet
             var confluentConfig = new ConsumerConfig
             {
-                GroupId = "test-group",
+                GroupId = "test-group-2",
                 ClientId = Environment.MachineName,
                 BootstrapServers = "localhost:29092",
                 AutoOffsetReset = AutoOffsetReset.Earliest,
@@ -53,6 +57,10 @@ namespace Local.Runner.Examples
                 }
             };
 
+            metrics = new MetricsBuilder()
+                .Report.ToConsole()
+                .Build();
+
             consumer = new BufferedConsumerBuilder<byte[], byte[]>(config)
                 .SetConsumerBuilder(new ConsumerBuilder<byte[], byte[]>(confluentConfig))
                 .SetAdminBuilder(new AdminClientBuilder(confluentConfig))
@@ -62,6 +70,15 @@ namespace Local.Runner.Examples
                 .SetChannelIdFunc((p) => p.Partition)
                 .SetLogger(logger)
                 .Build();
+
+            appMetricsTaskScheduler = new AppMetricsTaskScheduler(
+            TimeSpan.FromSeconds(10),
+            async () =>
+            {
+                await Task.WhenAll(metrics.ReportRunner.RunAllAsync());
+            });
+
+            appMetricsTaskScheduler.Start();
         }
 
         public void Subscribe()
@@ -71,7 +88,6 @@ namespace Local.Runner.Examples
 
         public void OnMessageLoopPing()
         {
-            logger.LogInformation("Message Loop Ping");
         }
 
         public void OnUnhealthyConnection(Exception exception)
@@ -106,7 +122,7 @@ namespace Local.Runner.Examples
 
         public void RecordSuccess(int messageCount, TimeSpan callbackDuration)
         {
-
+            metrics.Measure.Meter.Mark(new App.Metrics.Meter.MeterOptions { Name = "Processed Message", Context = "Consumer", MeasurementUnit = Unit.Events, RateUnit = TimeUnit.Seconds }, messageCount);
         }
 
         public void RecordFailure(int messageCount, TimeSpan callbackDuration)

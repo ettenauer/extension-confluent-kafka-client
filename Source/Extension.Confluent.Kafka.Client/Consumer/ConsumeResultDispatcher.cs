@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Extension.Confluent.Kafka.Client.Consumer
 {
-    internal class ConsumeResultDispatcher<TKey, TValue>
+    internal class ConsumeResultDispatcher<TKey, TValue> : IDisposable
     {
         private const int BackOffMilliseconds = 50;
         private const byte DefaultPriority = 0;
@@ -91,6 +91,11 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         {
             var worker = new ConsumeResultChannelWorker<TKey, TValue>(channel, callback, healthStatusCallback, configuration, logger);
             return worker.CreateRunTask(cancellationToken);
+        }
+
+        public void Dispose()
+        {
+            dispatcherStrategy.Dispose();
         }
     }
 }

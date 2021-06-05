@@ -251,6 +251,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
             this.messageLoopCancellationTokenSource.Dispose();
             this.internalConsumer.Dispose();
             this.offsetStore.Dispose();
+            this.dispatcher.Dispose();
         }
 
         private void RegisterWrokerCtsOnAssign(IEnumerable<TopicPartition> assignedPartitions)

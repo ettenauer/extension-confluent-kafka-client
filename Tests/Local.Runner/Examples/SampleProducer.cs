@@ -20,7 +20,7 @@ namespace Local.Runner.Examples
         {
             this.logger = logger;
             this.messageCount = messageCount;
-            this.producer = new ProducerBuilder<byte[], byte[]>(new ProducerConfig { BootstrapServers = "localhost:29092" })
+            this.producer = new ProducerBuilder<byte[], byte[]>(new ProducerConfig { BootstrapServers = "localhost:29092", BatchNumMessages = 10})
                 .Build();
         }
 
@@ -28,9 +28,9 @@ namespace Local.Runner.Examples
         {
             var tasks = new List<Task>();
 
-            for (int i = 0; i < messageCount; ++i)
+            for (int i = 0; i < messageCount; i++)
             {
-                producer.Produce(Topic, new Message<byte[], byte[]> { Key = BitConverter.GetBytes(i), Value = BitConverter.GetBytes(i) });
+                producer.Produce(Topic, new Message<byte[], byte[]> { Key = BitConverter.GetBytes(i), Value = Encoding.UTF8.GetBytes($"Test Message {DateTime.UtcNow.Ticks}") });
             }   
         }
 

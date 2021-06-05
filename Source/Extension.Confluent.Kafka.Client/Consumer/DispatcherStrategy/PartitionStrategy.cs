@@ -1,13 +1,15 @@
 ﻿using Confluent.Kafka;
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy
 {
     internal class PartitionStrategy<TKey, TValue> : IDispatcherStrategy<TKey, TValue>
     {
-        private readonly ConcurrentDictionary<long, ConsumeResultChannel<TKey, TValue>> channels;
+        private readonly ReaderWriterLockSlim slimLock = new ReaderWriterLockSlim();
 
+        private readonly ConcurrentDictionary<long, ConsumeResultChannel<TKey, TValue>> channels;
         private readonly int channelSize;
         private readonly byte priorityChannelCount;
 
@@ -24,23 +26,46 @@ namespace Extension.Confluent.Kafka.Client.Consumer.DispatcherStrategy
         {
             var channelId = result.TopicPartition.Partition.Value;
 
-            if (!channels.ContainsKey(channelId))
-            {
-                var newChannel = new ConsumeResultChannel<TKey, TValue>(channelId, channelSize, priorityChannelCount);
-                if (channels.TryAdd(channelId, newChannel))
-                {
-                    workerChannel = newChannel;
-                    return true;
-                }
-            }
+            slimLock.EnterReadLock();
 
-            workerChannel = channels[channelId];
-            return false;
+            try
+            {
+                if (!channels.ContainsKey(channelId))
+                {
+                    var newChannel = new ConsumeResultChannel<TKey, TValue>(channelId, channelSize, priorityChannelCount);
+                    if (channels.TryAdd(channelId, newChannel))
+                    {
+                        workerChannel = newChannel;
+                        return true;
+                    }
+                }
+
+                workerChannel = channels[channelId];
+                return false;
+            }
+            finally
+            {
+                slimLock.ExitReadLock();
+            }
         }
 
         public void Remove(IConsumeResultChannel<TKey, TValue> channel)
         {
-            channels.TryRemove(channel.Id, out var _);
+            slimLock.EnterWriteLock();
+
+            try
+            {
+                channels.TryRemove(channel.Id, out var _);
+            }
+            finally
+            {
+                slimLock.ExitWriteLock();
+            }
+        }
+
+        public void Dispose()
+        {
+            slimLock.Dispose();
         }
     }
 }
