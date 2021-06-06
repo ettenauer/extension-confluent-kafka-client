@@ -1,5 +1,3 @@
-![Banner](images/EXT-CONF-KFK-LOGO.jpg)
-
 # extension-confluent-kafka-client
 
 ![build](https://github.com/ettenauer/extension-confluent-kafka-client/actions/workflows/ci.yml/badge.svg?branch=main)
