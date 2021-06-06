@@ -22,10 +22,8 @@ jobs:
         dotnet-version: ['5.0.x' ]
     steps:
     - uses: actions/checkout@v2
-    - name: Setup kafka
-      uses: bbcCorp/kafka-actions@v1
-      with:
-        kafka port: 29092
+    - name: Start Kafka containers
+      run: docker-compose -f kafka-docker/docker-compose.yml up -d
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
