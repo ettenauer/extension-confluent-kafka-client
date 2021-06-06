@@ -102,6 +102,8 @@ namespace Extension.Confluent.Kafka.Client.IntegrationTests
                     Assert.That(callback.ReceivedResults.Count, Is.EqualTo(2));
                     Assert.That(callback.ReceivedResults[0].Message.Key, Is.EqualTo("test-message-1"));
                     Assert.That(callback.ReceivedResults[1].Message.Key, Is.EqualTo("test-message-2"));
+
+                    consumer.Unsubscribe();
                 }
             }
         }
