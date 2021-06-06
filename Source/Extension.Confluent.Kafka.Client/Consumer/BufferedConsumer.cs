@@ -167,6 +167,10 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                     {
                         break;
                     }
+                    catch (OperationCanceledException tce) when (tce.CancellationToken == cancellationToken)
+                    {
+                        break;
+                    }
                     catch (Exception ex)
                     {
                         connectionHealthy = false;

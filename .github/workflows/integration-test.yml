@@ -2,9 +2,6 @@ on:
   push:
     branches:
     - main
-  pull_request:
-    branches:
-    - main
 
 env:
   # Disable the .NET logo in the console output.
@@ -25,6 +22,10 @@ jobs:
         dotnet-version: ['5.0.x' ]
     steps:
     - uses: actions/checkout@v2
+    - name: Setup kafka
+      uses: bbcCorp/kafka-actions@v1
+      with:
+        kafka port: 29092
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
@@ -34,4 +35,4 @@ jobs:
     - name: Run Build
       run: dotnet build --no-restore
     - name: Run tests
-      run: dotnet test Tests/Extension.Confluent.Kafka.Client.Tests/Extension.Confluent.Kafka.Client.Tests.csproj /p:CollectCoverage=true /p:CoverletOutput=TestResults/ /p:CoverletOutputFormat=lcov /p:CollectCoverage=true /p:Threshold=80
+      run: dotnet test Tests/Extension.Confluent.Kafka.Client.IntegrationTests/Extension.Confluent.Kafka.Client.IntegrationTests.csproj

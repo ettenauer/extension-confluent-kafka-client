@@ -66,6 +66,10 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 {
                     logger.LogInformation($"work {channel.Id} terminated due to cancellation");
                 }
+                catch (OperationCanceledException tce) when (tce.CancellationToken == cancellationToken)
+                {
+                    logger.LogInformation($"work {channel.Id} terminated due to cancellation");
+                }
                 catch (Exception e)
                 {
                     logger.LogError(e, $"work failed for queue {channel.Id} due to:");

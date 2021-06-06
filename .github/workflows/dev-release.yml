@@ -29,7 +29,7 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release /p:Version=${VERSION}
     - name: Test
-      run: dotnet test --configuration Release /p:Version=${VERSION} --no-build
+      run: dotnet test Tests/Extension.Confluent.Kafka.Client.Tests/Extension.Confluent.Kafka.Client.Tests.csproj --configuration Release /p:Version=${VERSION} --no-build
     - name: Pack
       run: dotnet pack --configuration Release /p:Version=${VERSION} --no-build --output .
     - name: Push to https://nuget.pkg.github.com/ettenauer/index.json
