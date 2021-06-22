@@ -337,7 +337,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             consumer.Dispose();
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             //Note: verify cancellation
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Once);
