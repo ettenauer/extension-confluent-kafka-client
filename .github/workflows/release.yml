@@ -32,8 +32,10 @@ jobs:
     - name: Pack
       run: dotnet pack --configuration Release /p:Version=${VERSION} --no-build --output .
     - name: Push to https://nuget.pkg.github.com/ettenauer/index.json
-      run: dotnet nuget push Extension.Confluent.Kafka.Client.${VERSION}.nupkg --source https://nuget.pkg.github.com/ettenauer/index.json --api-key ${GITHUB_TOKEN}
+      run: dotnet nuget push Extension.Confluent.Kafka.Client.${VERSION}.nupkg --source https://nuget.pkg.github.com/ettenauer/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Push to https://api.nuget.org/v3/index.json
-      run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{secrets.NUGETORG_PUBLISH_KEY}} --skip-duplicate
+      run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${NUGETORG_PUBLISH_KEY} --skip-duplicate
+      env:
+        NUGETORG_PUBLISH_KEY: ${{ secrets.NUGETORG_PUBLISH_KEY }}
