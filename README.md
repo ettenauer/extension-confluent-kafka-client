@@ -12,7 +12,7 @@ All additional functionalities are **restricted to a AtLeastOnce** consumpution 
 
 ### Multi-Threading support via buffers feature
 
-Consumed messages from kafka are dispatched on internal buffers/channels. Messages are consumed from those buffers by tasks. The number of tasks and distribution is defined by setting called BufferSharding. Each task triggers a callback for application integration.
+Consumed messages from kafka are dispatched on internal buffers/channels. Messages are consumed from those buffers by tasks. The number of tasks and distribution is defined by setting called BufferSharding. Each task triggers a callback for application integration. The implemented approach is as well recommended by https://www.confluent.io/blog/kafka-consumer-multi-threaded-messaging/. 
 
 See [here](https://github.com/ettenauer/extension-confluent-kafka-client/blob/main/Source/Extension.Confluent.Kafka.Client/Consumer/ConsumeResultDispatcher.cs)
 
