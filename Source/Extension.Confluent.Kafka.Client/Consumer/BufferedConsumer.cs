@@ -118,7 +118,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                                 bool queued = false;
                                 if (workerTaskCancellationTokenSourceByTopicPartition.TryGetValue(result.TopicPartition, out var workerCts))
                                 {
-                                    queued = await dispatcher.TryEnqueueAsync(result, workerCts.Token);
+                                    queued = await dispatcher.TryEnqueueAsync(result, workerCts.Token).ConfigureAwait(false);
                                 }
                                 else
                                 {
@@ -141,11 +141,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                             {
                                 logger.LogError(ex, $"Enqueue message for processing failed: {result.TopicPartitionOffset}.");
                             }
-                        }
-
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            break;
                         }
 
                         if (flushCommit < DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(configuration.BufferCommitIntervalInMilliseconds)))

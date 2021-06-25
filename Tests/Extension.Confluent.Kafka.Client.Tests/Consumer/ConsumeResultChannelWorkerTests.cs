@@ -19,6 +19,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
         private ConsumeResultChannelWorkerConfig config;
         private Mock<ILogger> loggerMock;
         private Mock<IHealthStatusCallback> healthStatusCallbackMock;
+        private IConsumeResultChannel<byte[], byte[]> removedChannel;
 
         [SetUp]
         public void SetUp()
@@ -30,25 +31,29 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
             channelMock = new Mock<IConsumeResultChannel<byte[], byte[]>>();
             loggerMock = new Mock<ILogger>();
             healthStatusCallbackMock = new Mock<IHealthStatusCallback>();
+            removedChannel = null;
             channelWorker = new ConsumeResultChannelWorker<byte[], byte[]>(
                 channelMock.Object,
                 callbackMock.Object,
                 healthStatusCallbackMock.Object,
+                (c) => { removedChannel = c; },
                 config,
-                loggerMock.Object
+                loggerMock.Object            
                 );
         }
 
         [Test]
         public void Ctor_ArgumentValidation_ThrowException()
         {
-            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(null, callbackMock.Object, healthStatusCallbackMock.Object, config, loggerMock.Object));
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(null, callbackMock.Object, healthStatusCallbackMock.Object, (c) => { removedChannel = c; }, config, loggerMock.Object));
 
-            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, null, healthStatusCallbackMock.Object, config, loggerMock.Object));
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, null, healthStatusCallbackMock.Object, (c) => { removedChannel = c; }, config, loggerMock.Object));
 
-            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, healthStatusCallbackMock.Object, null, loggerMock.Object));
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, healthStatusCallbackMock.Object, null, config, loggerMock.Object));
 
-            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, healthStatusCallbackMock.Object, config, null));
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, healthStatusCallbackMock.Object, (c) => { removedChannel = c; }, null, loggerMock.Object));
+
+            Assert.Throws<ArgumentNullException>(() => new ConsumeResultChannelWorker<byte[], byte[]>(channelMock.Object, callbackMock.Object, healthStatusCallbackMock.Object, (c) => { removedChannel = c; }, config, null));
         }
 
         [Test]
@@ -69,13 +74,13 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
                 workerTask.Start();
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
                 cts.Cancel();
 
-                await workerTask;
-
+                Assert.That(removedChannel, Is.Null);
                 callbackMock.Verify(cb => cb.OnReceivedAsync(It.Is<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(cb => cb.Length == 1), It.IsAny<CancellationToken>()), Times.Exactly(1));
+                cts.Cancel();
             }   
         }
 
@@ -98,14 +103,42 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
                 workerTask.Start();
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+                Assert.That(removedChannel, Is.Null);
+                callbackMock.Verify(cb => cb.OnReceivedAsync(It.Is<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(cb => cb.Length == 2), It.IsAny<CancellationToken>()), Times.Exactly(1));
+                callbackMock.Verify(cb => cb.OnReceivedAsync(It.Is<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(cb => cb.Length == 1), It.IsAny<CancellationToken>()), Times.Exactly(1));
+                cts.Cancel();
+            }
+        }
+
+        [Test]
+        public async Task CreateRunTask_Cancellation_VerifyCleanUp()
+        {
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+            {
+                var fakeResult = new ConsumeResult<byte[], byte[]>();
+
+                channelMock.Setup(c => c.WaitToReadAsync(It.IsAny<CancellationToken>()))
+                    .Returns(Task.FromResult(true));
+
+                channelMock.SetupSequence(c => c.TryRead(out fakeResult))
+                    .Returns(true)
+                    .Returns(true);
+
+                var workerTask = channelWorker.CreateRunTask(cts.Token);
+
+                workerTask.Start();
+
+                await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+
+                Assert.That(removedChannel, Is.Null);
 
                 cts.Cancel();
 
-                await workerTask;
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
-                callbackMock.Verify(cb => cb.OnReceivedAsync(It.Is<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(cb => cb.Length == 2), It.IsAny<CancellationToken>()), Times.Exactly(1));
-                callbackMock.Verify(cb => cb.OnReceivedAsync(It.Is<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(cb => cb.Length == 1), It.IsAny<CancellationToken>()), Times.Exactly(1));
+                Assert.That(removedChannel, Is.Not.Null);    
             }
         }
     }

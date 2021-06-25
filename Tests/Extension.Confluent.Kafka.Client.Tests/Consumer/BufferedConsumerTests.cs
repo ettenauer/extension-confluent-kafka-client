@@ -181,7 +181,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
 
@@ -225,7 +225,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
 
@@ -252,7 +252,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition>());
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
 
@@ -280,18 +280,18 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             consumer.Subscribe();
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             //Note: cancelled by the second subscribe call
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Once);
 
             consumer.Unsubscribe();
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             //Note: verify cancellation
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Exactly(2));
@@ -315,7 +315,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             consumer.Unsubscribe();
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             //Note: verify cancellation
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Once);
@@ -335,9 +335,11 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
+            await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
             consumer.Dispose();
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
             //Note: verify cancellation
             healthStatusCallbackMock.Verify(_ => _.OnMessageLoopCancelled(It.IsAny<string>()), Times.Once);
@@ -368,11 +370,11 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition>());
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             //Note: verify cancellation
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
@@ -401,13 +403,13 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             //Note: reuse same channel
             dispatcherStrategyMock.SetupSequence(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
                 .Returns(false);
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeastOnce());
             callbackMock.Verify(_ => _.OnReceivedAsync(It.IsAny<ReadOnlyMemory<ConsumeResult<byte[], byte[]>>>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce());
@@ -432,7 +434,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
             healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.AtLeast(2));
@@ -458,7 +460,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
 
             internalConsumerMock.Verify(_ => _.Consume(It.IsAny<TimeSpan>()), Times.AtLeast(2));
 
@@ -488,7 +490,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
 
             //Note: health check is triggered
             healthStatusCallbackMock.Verify(_ => _.OnHealthyConnection(), Times.Once);

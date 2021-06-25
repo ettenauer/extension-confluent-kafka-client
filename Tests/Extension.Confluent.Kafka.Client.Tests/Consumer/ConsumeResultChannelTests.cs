@@ -2,6 +2,7 @@
 using Extension.Confluent.Kafka.Client.Consumer;
 using NUnit.Framework;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -101,13 +102,39 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
             var channel = new ConsumeResultChannel<byte[], byte[]>(channelId: 1, channelSize: 2, priorityChannelCount: 2);
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
             {
-                var waitTask = Task.Run(async () => await channel.WaitToReadAsync(cts.Token));
+                var waitTask = Task.Run(async () => await channel.WaitToReadAsync(cts.Token).ConfigureAwait(false));
 
                 //if write doesn't unblock OperationCanceledException is thrown
                 channel.TryWrite(fakeResult, priority);
 
-                await waitTask;
+                await waitTask.ConfigureAwait(false);
+            }
+        }
+
+        [Test]
+        public async Task WaitToReadAsync_Cancellation_Unblock()
+        {
+            var channel = new ConsumeResultChannel<byte[], byte[]>(channelId: 1, channelSize: 2, priorityChannelCount: 2);
+
+            var stopwatch = Stopwatch.StartNew();
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+            {
+                var token = cts.Token;
+                try
+                {
+                    await channel.WaitToReadAsync(token).ConfigureAwait(false);
+
+                    Assert.Fail("check cancellation code");
+                }
+                catch (OperationCanceledException e) when (e.CancellationToken == token)
+                {
+                    stopwatch.Stop();
+                    if (stopwatch.Elapsed < TimeSpan.FromMilliseconds(4900)) //Note: lower value requied due to clock precision
+                        Assert.Fail($"Timeout to short {stopwatch.Elapsed}, check canncellation code");
+                        
+                    TestContext.Out.Write("Cancellation received yout to timeout");
+                }
             }
         }
     }
-}
+ }

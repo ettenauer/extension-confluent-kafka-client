@@ -14,17 +14,20 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         private readonly ConsumeResultChannelWorkerConfig configuration;
         private readonly IConsumeResultCallback<TKey, TValue> callback;
         private readonly IHealthStatusCallback? healthStatusCallback;
+        private readonly Action<IConsumeResultChannel<TKey, TValue>> cleanUpFunc;
         private readonly ILogger logger;
         
         public ConsumeResultChannelWorker(IConsumeResultChannel<TKey, TValue> channel, 
             IConsumeResultCallback<TKey, TValue> callback,
             IHealthStatusCallback? healthStatusCallback,
+            Action<IConsumeResultChannel<TKey, TValue>> cleanUpFunc,
             ConsumeResultChannelWorkerConfig configuration,
             ILogger logger)
         {
             this.channel = channel ?? throw new ArgumentNullException(nameof(channel));
             this.callback = callback ?? throw new ArgumentNullException(nameof(callback));
             this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            this.cleanUpFunc = cleanUpFunc ?? throw new ArgumentNullException(nameof(cleanUpFunc));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.healthStatusCallback = healthStatusCallback;
         }
@@ -82,6 +85,10 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                 var reason = (cancellationToken.IsCancellationRequested ? ": cancellation was requested" : string.Empty);
                 healthStatusCallback?.OnWorkerTaskCancelled(channel.Id, reason);
                 logger.LogInformation($"Worker task {channel.Id} terminated : {reason}");
+
+                cleanUpFunc.Invoke(channel);
+
+                logger.LogInformation($"Worker task {channel.Id} cleanup done");
             });
         }
     }

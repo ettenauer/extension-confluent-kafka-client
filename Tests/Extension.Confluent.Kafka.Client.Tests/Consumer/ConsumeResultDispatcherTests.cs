@@ -46,6 +46,9 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 healthStatusCallbackMock.Object,
                 config,
                 loggerMock.Object);
+
+            channelMock.Setup(c => c.WaitToReadAsync(It.IsAny<CancellationToken>()))
+                       .Returns(Task.FromResult(true));
         }
 
         [Test]
@@ -72,7 +75,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
             {
-                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token), Is.False);
+                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.False);
             }
         }
 
@@ -89,7 +92,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
             {
-                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token), Is.True);
+                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.True);
             }
         }
 
@@ -101,16 +104,27 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                        .Returns(true);
 
             var channel = channelMock.Object;
-            dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
-                .Returns(true);
 
             using (var cts = new CancellationTokenSource())
             {
-                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token), Is.True);
+                dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
+                                      .Returns(true);
+
+                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.True);
+
+                dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
+                      .Returns(false);
+
+                for (int i = 0; i < 5; i++)
+                {
+                    Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.True);
+                }
+
+                dispatcherStrategyMock.Verify(ds => ds.Remove(It.IsAny<IConsumeResultChannel<byte[], byte[]>>()), Times.Never);
 
                 cts.Cancel();
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             }
 
             dispatcherStrategyMock.Verify(ds => ds.Remove(It.IsAny<IConsumeResultChannel<byte[], byte[]>>()), Times.Once);
