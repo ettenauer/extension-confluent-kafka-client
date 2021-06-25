@@ -129,7 +129,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 catch (OperationCanceledException e) when (e.CancellationToken == token)
                 {
                     stopwatch.Stop();
-                    if (stopwatch.Elapsed < TimeSpan.FromSeconds(5))
+                    if (stopwatch.Elapsed < TimeSpan.FromMilliseconds(4900)) //Note: lower value requied due to clock precision
                         Assert.Fail($"Timeout to short {stopwatch.Elapsed}, check canncellation code");
                         
                     TestContext.Out.Write("Cancellation received yout to timeout");
