@@ -72,7 +72,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
             {
-                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token), Is.False);
+                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.False);
             }
         }
 
@@ -89,7 +89,7 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
             {
-                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token), Is.True);
+                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.True);
             }
         }
 
@@ -106,11 +106,11 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             using (var cts = new CancellationTokenSource())
             {
-                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token), Is.True);
+                Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.True);
 
                 cts.Cancel();
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             }
 
             dispatcherStrategyMock.Verify(ds => ds.Remove(It.IsAny<IConsumeResultChannel<byte[], byte[]>>()), Times.Once);

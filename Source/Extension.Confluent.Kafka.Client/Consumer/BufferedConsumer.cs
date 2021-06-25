@@ -118,7 +118,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                                 bool queued = false;
                                 if (workerTaskCancellationTokenSourceByTopicPartition.TryGetValue(result.TopicPartition, out var workerCts))
                                 {
-                                    queued = await dispatcher.TryEnqueueAsync(result, workerCts.Token);
+                                    queued = await dispatcher.TryEnqueueAsync(result, workerCts.Token).ConfigureAwait(false);
                                 }
                                 else
                                 {

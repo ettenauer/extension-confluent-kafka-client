@@ -22,8 +22,8 @@ namespace Extension.Confluent.Kafka.Client.Consumer
         private readonly ConcurrentDictionary<long, Task> workers;
         private readonly ILogger logger;
 
-        public ConsumeResultDispatcher(IConsumeResultCallback<TKey, TValue> callback, 
-            IDispatcherStrategy<TKey, TValue> dispatcherStrategy, 
+        public ConsumeResultDispatcher(IConsumeResultCallback<TKey, TValue> callback,
+            IDispatcherStrategy<TKey, TValue> dispatcherStrategy,
             IHealthStatusCallback? healthStatusCallback,
             ConsumeResultChannelWorkerConfig configuration,
             ILogger logger)
@@ -60,19 +60,14 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                     }
 
                     workerTask.Start();
-                    //Note: attach cleanup for terminated worker
-                    _ = workerTask.ContinueWith((token) =>
-                                         {
-                                             workers.TryRemove(channel.Id, out _);
-                                             dispatcherStrategy.Remove(channel);
-                                         });
+
                     return true;
                 }
 
                 //Note: header doesn't have to be unique, in order to simplify logic we add header again in case of retry
                 result.Message?.Headers?.AddWorkerChannelId(channel.Id);
 
-                //Note: we allow one retry in order to prevent impact on short hickup 
+                //Note: we allows one retry in order to prevent impact on short hickup 
                 if (!channel.TryWrite(result, priority))
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(BackOffMilliseconds), cancellationToken).ConfigureAwait(false);
@@ -89,9 +84,23 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
         private Task CreateWorkerTask(IConsumeResultChannel<TKey, TValue> channel, CancellationToken cancellationToken)
         {
-            var worker = new ConsumeResultChannelWorker<TKey, TValue>(channel, callback, healthStatusCallback, configuration, logger);
+            var worker = new ConsumeResultChannelWorker<TKey, TValue>(channel, callback, healthStatusCallback, CleanupChannel, configuration, logger);
             return worker.CreateRunTask(cancellationToken);
         }
+
+        public void CleanupChannel(IConsumeResultChannel<TKey, TValue> channel)
+        {
+            try
+            {
+                workers.TryRemove(channel.Id, out _);
+                dispatcherStrategy.Remove(channel);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error during dispatcher channel cleanup:");
+            }
+        }
+
 
         public void Dispose()
         {

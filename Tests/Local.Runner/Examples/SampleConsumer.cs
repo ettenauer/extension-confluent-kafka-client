@@ -75,7 +75,7 @@ namespace Local.Runner.Examples
             TimeSpan.FromSeconds(10),
             async () =>
             {
-                await Task.WhenAll(metrics.ReportRunner.RunAllAsync());
+                await Task.WhenAll(metrics.ReportRunner.RunAllAsync()).ConfigureAwait(false);
             });
 
             appMetricsTaskScheduler.Start();

@@ -55,7 +55,7 @@ namespace Extension.Confluent.Kafka.Client.Consumer
 
             try
             {
-                available = await await Task.WhenAny(channels.Select(_ => _.Reader.WaitToReadAsync(cancellationToken).AsTask()));
+                available = await (await Task.WhenAny(channels.Select(_ => _.Reader.WaitToReadAsync(cancellationToken).AsTask())).ConfigureAwait(false)).ConfigureAwait(false);
             }
             finally
             {
