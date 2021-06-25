@@ -46,6 +46,9 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 healthStatusCallbackMock.Object,
                 config,
                 loggerMock.Object);
+
+            channelMock.Setup(c => c.WaitToReadAsync(It.IsAny<CancellationToken>()))
+                       .Returns(Task.FromResult(true));
         }
 
         [Test]
@@ -116,6 +119,8 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                 {
                     Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.True);
                 }
+
+                dispatcherStrategyMock.Verify(ds => ds.Remove(It.IsAny<IConsumeResultChannel<byte[], byte[]>>()), Times.Never);
 
                 cts.Cancel();
 

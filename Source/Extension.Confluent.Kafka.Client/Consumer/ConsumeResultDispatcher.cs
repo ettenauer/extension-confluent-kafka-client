@@ -54,12 +54,13 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                         continue;
                     }
 
+                    //Note: start worker task before write into channel
+                    workerTask.Start();
+
                     if (!channel.TryWrite(result, priority))
                     {
                         return false;
                     }
-
-                    workerTask.Start();
 
                     return true;
                 }
