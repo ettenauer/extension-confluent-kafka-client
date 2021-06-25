@@ -335,6 +335,8 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
 
             assignHandler.Invoke(internalConsumerMock.Object, new List<TopicPartition> { new TopicPartition("Test1", 1) });
 
+            await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
             consumer.Dispose();
 
             await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
