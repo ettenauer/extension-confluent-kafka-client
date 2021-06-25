@@ -101,12 +101,21 @@ namespace Extension.Confluent.Kafka.Client.Tests.Consumer
                        .Returns(true);
 
             var channel = channelMock.Object;
-            dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
-                .Returns(true);
 
             using (var cts = new CancellationTokenSource())
             {
+                dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
+                                      .Returns(true);
+
                 Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.True);
+
+                dispatcherStrategyMock.Setup(d => d.CreateOrGet(It.IsAny<ConsumeResult<byte[], byte[]>>(), out channel))
+                      .Returns(false);
+
+                for (int i = 0; i < 5; i++)
+                {
+                    Assert.That(await dispatcher.TryEnqueueAsync(fakeResult, cts.Token).ConfigureAwait(false), Is.True);
+                }
 
                 cts.Cancel();
 
