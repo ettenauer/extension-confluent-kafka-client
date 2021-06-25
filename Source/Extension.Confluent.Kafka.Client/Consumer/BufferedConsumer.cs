@@ -143,11 +143,6 @@ namespace Extension.Confluent.Kafka.Client.Consumer
                             }
                         }
 
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            break;
-                        }
-
                         if (flushCommit < DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(configuration.BufferCommitIntervalInMilliseconds)))
                         {
                             //Note: we commit offset based on the internal offset store then the sharding strategy defines the offset commit strategy
