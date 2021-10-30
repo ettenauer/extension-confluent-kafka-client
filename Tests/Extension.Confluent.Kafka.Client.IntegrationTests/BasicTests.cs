@@ -37,12 +37,12 @@ namespace Extension.Confluent.Kafka.Client.IntegrationTests
                 .Build();
         }
 
-        [OneTimeTearDown]
-        public void Cleanup()
-        {
-            adminClient.Dispose();
-            producer.Dispose();
-        }
+        //[OneTimeTearDown]
+        //public void Cleanup()
+        //{
+        //    adminClient.Dispose();
+        //    producer.Dispose();
+        //}
 
         [SetUp]
         public void Setup()
