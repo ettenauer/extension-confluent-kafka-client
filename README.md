@@ -3,22 +3,22 @@
 ![build](https://github.com/ettenauer/extension-confluent-kafka-client/actions/workflows/ci.yml/badge.svg?branch=main)
 ![integration-tests](https://github.com/ettenauer/extension-confluent-kafka-client/actions/workflows/integration-test.yml/badge.svg?branch=main)
 
-The project adds addtional functionality to [confluent-kafka-dotnet](https://github.com/confluentinc/confluent-kafka-dotnet) by adding an abstraction layer with buffering.
+The project extends functionality to [confluent-kafka-dotnet](https://github.com/confluentinc/confluent-kafka-dotnet) by adding an abstraction layer with buffering.
 
 ### IMPORTANT ##
-All additional functionalities are **restricted to a AtLeastOnce** consumpution pattern, otherwise the underlying buffering concept will cause side-effects.
+All features are **restricted to a AtLeastOnce** consumption pattern, otherwise the underlying buffering concept will cause side-effects.
 
 ## Extended Functionality
 
 ### Multi-Threading support via buffers feature
 
-Consumed messages from kafka are dispatched on internal buffers/channels. Messages are consumed from those buffers by tasks. The number of tasks and distribution is defined by setting called BufferSharding. Each task triggers a callback for application integration. The implemented approach is as well recommended by https://www.confluent.io/blog/kafka-consumer-multi-threaded-messaging/. 
+Consumed messages from kafka are dispatched on internal buffers/channels. Messages are consumed from those buffers by tasks. The number of tasks and distribution is defined by setting called `BufferSharding`. Each task triggers a callback for application integration. The implemented approach is as well recommended by https://www.confluent.io/blog/kafka-consumer-multi-threaded-messaging/. 
 
 See [here](https://github.com/ettenauer/extension-confluent-kafka-client/blob/main/Source/Extension.Confluent.Kafka.Client/Consumer/ConsumeResultDispatcher.cs)
 
 ### Prioritized topics feature
 
-Each defined topic has a priority. The messages are dispatched into bufferes based on the defined topic priority. That allows to process messages from high prior topics faster in case low prio topics would occupy message buffer task. 
+Each defined topic has a priority. The messages are dispatched into buffers based on the defined topic priority. That allows to process messages from high prior topics faster in case low prio topics would occupy message buffer task. 
 
 See [here](https://github.com/ettenauer/extension-confluent-kafka-client/blob/main/Source/Extension.Confluent.Kafka.Client/Consumer/ConsumeResultChannel.cs#L54)
 
@@ -30,7 +30,7 @@ See [here](https://github.com/ettenauer/extension-confluent-kafka-client/blob/ma
 
 ### Connection monitoring feature
 
-The connection status to broker is activly checked and disruptions are notifed via callback.
+The connection status to broker is actively checked and disruptions are notifed via callback.
 
 ### Interval consumption feature => coming soon (v2.0.0), not implemented yet
 
@@ -41,7 +41,6 @@ Messages from certain defined topics are consumed in perodical interval. This al
 Take a look in the [examples](Tests/Local.Runner/Examples) for usage.
 
 ```csharp
-
 //Note: confluent configuration see https://github.com/confluentinc/confluent-kafka-dotnet
 var confluentConfig = new ConsumerConfig
 {
