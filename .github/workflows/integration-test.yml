@@ -25,7 +25,7 @@ jobs:
     - name: Start Kafka containers
       run: docker-compose -f kafka-docker/docker-compose.yml up -d
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3.0.2
+      uses: actions/setup-dotnet@v3.0.3
       with:
         dotnet-version: 5.0.x
     - name: Restore dependencies
