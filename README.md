@@ -32,7 +32,7 @@ See [here](https://github.com/ettenauer/extension-confluent-kafka-client/blob/ma
 
 The connection status to broker is actively checked and disruptions are notifed via callback.
 
-### Interval consumption feature => coming soon (v2.0.0), not implemented yet
+### [FUTURE-RELEASE, not implemented yet] Interval consumption feature
 
 Messages from certain defined topics are consumed in perodical interval. This allows to maintain in example a deadletter topic, which is flushed periodically. 
 
